@@ -39,9 +39,6 @@ export default function App() {
   return (
     <>
       <div className="bg" />
-      <h1>
-        dunkelhaus
-      </h1>
       <Canvas shadowMap camera={{ position: [0, 0, 15] }}>
         <ambientLight intensity={0.75} />
         <pointLight intensity={1} position={[-10, -25, -10]} />
@@ -50,7 +47,7 @@ export default function App() {
           intensity={2.25}
           angle={0.2}
           penumbra={1}
-          position={[25, 25, 25]}
+          position={[35, 35, 35]}
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
           shadow-bias={-0.0001}

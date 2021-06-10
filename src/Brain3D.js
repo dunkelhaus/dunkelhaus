@@ -13,7 +13,7 @@ export default function Brain3D(props) {
   const { nodes, materials } = useLoader(GLTFLoader, '/BrainArterial3D-draco.gltf', draco('/draco-gltf/'))
   return (
       <group ref={group} {...props} dispose={null}>
-        <group position={[0, -20, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.75, 0.75, 0.75]}>
+        <group position={[0, -20, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.85, 0.85, 0.85]}>
           <mesh
               material={materials.Material_blue}
               geometry={nodes.L_Anterior_Cerebral_Artery.geometry}
