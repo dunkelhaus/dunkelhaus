@@ -2,6 +2,7 @@ export const experience = [
   {
     number: "01",
     company: "Comcast",
+    logo: "comcast.svg",
     period: "Mar 2025 — present",
     role: "Software Engineer 3",
     title: "Smart-home behavior modeling",
@@ -14,6 +15,7 @@ export const experience = [
   {
     number: "02",
     company: "Comcast",
+    logo: "comcast.svg",
     period: "Aug 2023 — Mar 2025",
     role: "Software Engineer 2",
     title: "Event-driven smart-home infrastructure",
@@ -26,6 +28,7 @@ export const experience = [
   {
     number: "03",
     company: "Comcast",
+    logo: "comcast.svg",
     period: "Sep 2021 — Aug 2023",
     role: "Software Engineer 1",
     title: "Smart-home and internet security features",
@@ -38,6 +41,7 @@ export const experience = [
   {
     number: "04",
     company: "Wells Fargo · Persistent Systems",
+    logo: "wells-fargo.svg",
     period: "2019 — 2020",
     role: "Machine Learning Engineer",
     title: "Chatbot intent classification and explainability",
@@ -50,6 +54,7 @@ export const experience = [
   {
     number: "05",
     company: "Persistent Systems",
+    logo: "persistent.svg",
     period: "2019",
     role: "Software Developer",
     title: "Client proof-of-concept applications",
@@ -62,6 +67,7 @@ export const experience = [
   {
     number: "06",
     company: "Persistent Systems",
+    logo: "persistent.svg",
     period: "2019",
     role: "Software Developer Intern",
     title: "Business process and automation tools",
@@ -74,6 +80,7 @@ export const experience = [
   {
     number: "07",
     company: "Seceon Inc.",
+    logo: null,
     period: "May 2017 — Oct 2017",
     role: "Research Intern",
     title: "Graph-based insider threat detection",

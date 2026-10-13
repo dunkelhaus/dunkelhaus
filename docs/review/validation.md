@@ -8,7 +8,7 @@ OpenSpec change: `rebuild-personal-website`. The old brain/CRA application is re
 - `bun run check`: zero errors and zero warnings.
 - `bun run test`: 11 tests passed across 2 files.
 - `bun run build`: successful production build.
-- `bun run test:browser`: 11 production-browser tests passed in Chromium.
+- `bun run test:browser`: 12 production-browser checks passed (11 existing checks plus the company-logo check) in Chromium.
 - No axe violations under the tested WCAG 2 A/AA, 2.1 A/AA, and 2.2 AA rule tags on desktop homepage, desktop playable, and mobile playable.
 - Keyboard and touch operation, minimum primary-control target dimensions, reduced motion, fragment navigation/back, valid resume download, local font loading and fallback, lazy experiment loading, invalid reward rejection, reset during training, visibility pause, reopening, worker failure/retry, module download failure/reload, and unavailable-canvas fallback exercised.
 - The development server was separately started using the saved instructions; Chromium rendered the introduction and launched the playable without page errors.
@@ -63,6 +63,6 @@ Reviewed homepage composition and typography at 360, 768, and 1440px, plus deskt
 
 ## Remaining limits and delivery
 
-Browser checks ran in Chromium, not Safari or Firefox. Employment dates that conflict between source documents use year-level precision; page claims are source-backed. The original supplied resume intentionally remains downloadable with its original contact details; page copy omits telephone. Only that PDF, the icon, and the font license are public assets; other attachments are not published. Existing OpenSpec artifacts and unrelated user files were preserved, and the prior ignored CRA build generated during onboarding was removed.
+Browser checks ran in Chromium, not Safari or Firefox. Employment dates that conflict between source documents use year-level precision; page claims are source-backed. The original supplied resume intentionally remains downloadable with its original contact details; page copy omits telephone. Public assets include the supplied resume, site icon, font license, and locally stored company logos with source/license notes; other attachments are not published. Existing OpenSpec artifacts and unrelated user files were preserved, and the prior ignored CRA build generated during onboarding was removed.
 
 The static build and development server are locally ready. No deployment, production-domain choice, environment publication, or OpenSpec archive was performed. Review and save the new environment draft, then publish it to retain the updated snapshot and setup for future tasks. A production host can be selected separately.

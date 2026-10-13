@@ -74,9 +74,14 @@
       {#each experience as item}
         <article class="experience-row">
           <div class="experience-meta">
-            <span class="row-number">{item.number}</span><strong
-              >{item.company}</strong
-            ><span>{item.period}</span>
+            <span class="row-number">{item.number}</span>
+            <strong class="company-name">
+              {#if item.logo}
+                <img class="company-logo" src={`${import.meta.env.BASE_URL}companies/${item.logo}`} width="32" height="32" alt="" loading="lazy" />
+              {/if}
+              <span>{item.company}</span>
+            </strong>
+            <span class="experience-period">{item.period}</span>
           </div>
           <div class="experience-body">
             <span class="role">{item.role}</span>

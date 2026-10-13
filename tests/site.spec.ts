@@ -116,3 +116,17 @@ test('experience lists separate engineering roles and earlier work',async({page}
   await expect(rows.filter({hasText:'Software Engineer 1'})).toContainText('Sep 2021 — Aug 2023');
   const research=rows.filter({hasText:'Research Intern'});await research.locator('summary').click();await expect(research).toContainText('Prasant Mohapatra');
 });
+
+test('experience company logos load locally alongside visible names',async({page})=>{
+  await page.goto('/#experience');
+  const logos=page.locator('.company-logo');await expect(logos).toHaveCount(6);
+  for(const image of await logos.all()){
+    await image.scrollIntoViewIfNeeded();await expect(image).toHaveJSProperty('complete',true);
+    expect(await image.evaluate((e:HTMLImageElement)=>e.naturalWidth)).toBeGreaterThan(0);
+    await expect(image).toHaveAttribute('alt','');
+  }
+  const records=await page.locator('.company-name').evaluateAll(es=>es.map(e=>({name:e.textContent?.trim(),src:e.querySelector('img')?.getAttribute('src')})));
+  for(const [company,file] of [['Comcast','comcast.svg'],['Wells Fargo · Persistent Systems','wells-fargo.svg'],['Persistent Systems','persistent.svg']]){
+    expect(records.some(r=>r.name===company&&r.src?.endsWith(file))).toBe(true);
+  }
+});
