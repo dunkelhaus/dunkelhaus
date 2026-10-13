@@ -16,7 +16,7 @@
       >Lab <span class="nav-dot" aria-hidden="true"></span></a
     ><a href="#about">About</a>
   </nav>
-  <a class="header-contact" href={links.email}>Let’s talk <Arrow /></a>
+  <a class="header-contact" href={links.email}>Contact <Arrow /></a>
 </header>
 
 <main id="main">
@@ -26,12 +26,12 @@
         <span class="tiny-dot"></span> SOFTWARE ENGINEER / AUSTIN, TX
       </div>
       <h1 id="hero-title">
-        Building systems.<br />Exploring
-        <span class="cyan-text">intelligence.</span>
+        Software engineer.<br />
+        <span class="cyan-text">Machine learning.</span>
       </h1>
       <p class="hero-description">
-        I’m Suraj. I work at the intersection of software and machine learning,
-        turning complex ideas into useful, thoughtful systems.
+        I’m Suraj, a software engineer in Austin. My work spans machine learning,
+        event-driven systems, and engineering tools.
       </p>
       <div class="hero-actions">
         <a class="button primary" href="#experience"
@@ -46,11 +46,11 @@
     <div class="hero-art">
       <Molecules />
       <div class="art-caption">
-        <span>STRUCTURE × POSSIBILITY</span><span>FIG. 01</span>
+        <span>CYAN / MAGENTA</span><span>FIG. 01</span>
       </div>
     </div>
     <div class="hero-bottom">
-      <span>Software. Learning. A little curiosity.</span><a href="#experience"
+      <a href="#experience"
         >SCROLL TO EXPLORE <Arrow direction="down" /></a
       >
     </div>
@@ -64,11 +64,10 @@
     <div class="section-heading">
       <div>
         <span class="eyebrow">01 / SELECTED EXPERIENCE</span>
-        <h2 id="experience-title">Ideas into impact.</h2>
+        <h2 id="experience-title">Selected experience</h2>
       </div>
       <p>
-        From understanding language to connecting homes—work grounded in real
-        systems.
+        Machine learning and software engineering at Comcast and Wells Fargo.
       </p>
     </div>
     <div class="experience-list">
@@ -102,11 +101,10 @@
     <div class="section-heading">
       <div>
         <span class="eyebrow">02 / THE LAB</span>
-        <h2 id="lab-title">Less theory. More trying.</h2>
+        <h2 id="lab-title">ML lab</h2>
       </div>
       <p>
-        A place to make ideas tangible.<br />Start with a little reinforcement
-        learning.
+        Interactive experiments in machine learning.
       </p>
     </div>
     <LabShell />
@@ -114,13 +112,13 @@
 
   <section class="about section-wrap" id="about" aria-labelledby="about-title">
     <div class="about-label">
-      <span class="eyebrow">03 / A LITTLE ABOUT ME</span>
+      <span class="eyebrow">03 / ABOUT</span>
       <div class="about-symbol" aria-hidden="true">
         <span></span><span></span>
       </div>
     </div>
     <div class="about-copy">
-      <h2 id="about-title">Curiosity is the<br />common thread.</h2>
+      <h2 id="about-title">About me</h2>
       <p>
         I’m a software engineer based in Austin, with a computer science
         background from UC Davis. My work connects machine learning, distributed
@@ -129,11 +127,10 @@
       <p>
         Outside that work, I’m drawn to music with texture and contrast—from
         electronic and heavy rock to quieter songwriting and cinematic scores.
-        This site is a small space for that same curiosity: building,
-        experimenting, and sharing what I learn.
+        I use this site to share projects and experiments.
       </p>
       <a class="text-link" href={links.email}
-        >Have something in mind? Let’s talk. <Arrow /></a
+        >Email me <Arrow /></a
       >
     </div>
   </section>
@@ -143,7 +140,7 @@
   <div>
     <a class="wordmark" href="#home"
       >Suraj Jena<span class="wordmark-period">.</span></a
-    ><span class="footer-note">Built with intention. Always exploring.</span>
+    >
   </div>
   <nav aria-label="Social links">
     <a href={links.github}>GitHub <Arrow /></a><a href={links.linkedin}

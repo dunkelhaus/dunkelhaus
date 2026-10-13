@@ -4,7 +4,7 @@ export const experience = [
     company: "Comcast",
     period: "2025 — present",
     role: "Software Engineer 3",
-    title: "From device events to useful intelligence.",
+    title: "Smart-home behavior modeling",
     summary:
       "Leading a dedicated team exploring smart-home behavior through predictive modeling and LLM-generated activity insights.",
     detail:
@@ -16,7 +16,7 @@ export const experience = [
     company: "Comcast",
     period: "2021 — 2025",
     role: "Software Engineer 1 → 2",
-    title: "Systems that connect the everyday.",
+    title: "Event-driven smart-home infrastructure",
     summary:
       "Building event-driven infrastructure on AWS for smart-home and security platforms, and improving the systems behind customer-facing workflows.",
     detail:
@@ -28,7 +28,7 @@ export const experience = [
     company: "Wells Fargo · Persistent Systems",
     period: "2019 — 2020",
     role: "Machine Learning Engineer",
-    title: "Making language models understandable.",
+    title: "Chatbot intent classification and explainability",
     summary:
       "Leading the Python implementation of chatbot intent classification and the transition from a Java-based ML pipeline.",
     detail:

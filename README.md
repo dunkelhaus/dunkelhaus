@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/profile/header-dark.svg">
-  <img src="docs/profile/header-light.svg" width="100%" alt="Suraj Jena — Systems. Intelligence. Curiosity. Software engineer in Austin.">
+  <img src="docs/profile/header-light.svg" width="100%" alt="Suraj Jena — Software engineer in Austin.">
 </picture>
 
 ### Hi, I’m Suraj.
@@ -11,7 +11,7 @@ Previously, I worked on chatbot intent classification at **Wells Fargo**, includ
 
 [Website](https://dunkelhaus.github.io/dunkelhaus/) · [LinkedIn](https://www.linkedin.com/in/skjena/) · [Résumé](public/suraj-jena-resume.pdf)
 
-#### Where my work meets my curiosity
+#### Areas of work
 
 - **Machine learning:** understanding smart-home behavior through predictive models and activity insights.
 - **Software systems:** event-driven infrastructure on AWS, time-series data, and reliable customer-facing workflows.

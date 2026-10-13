@@ -33,10 +33,10 @@
       <span class="eyebrow"
         ><span class="tiny-dot"></span> EXPERIMENT 001 / REINFORCEMENT LEARNING</span
       >
-      <h3>A small world.<br />A learning mind.</h3>
+      <h3>Reward-design playground</h3>
       <p>
-        Give an agent a goal. Change what it values. Discover how a few rewards
-        can change the path it takes.
+        Adjust the rewards in a navigation task, train an agent, and observe
+        its learned policy.
       </p>
       <button class="button primary" onclick={launch} disabled={loading}
         >{loading

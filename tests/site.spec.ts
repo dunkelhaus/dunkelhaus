@@ -4,12 +4,12 @@ import AxeBuilder from '@axe-core/playwright';
 test('personal introduction, navigation, contacts, and resume', async ({page,request})=>{
   await page.goto('/');
   await expect(page).toHaveTitle(/Suraj Jena/);
-  await expect(page.getByRole('heading',{level:1})).toContainText('Building systems');
+  await expect(page.getByRole('heading',{level:1})).toContainText('Software engineer.');
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Experience'}).click();
   await expect(page).toHaveURL(/#experience/);
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'About'}).click();
   await page.goBack();await expect(page).toHaveURL(/#experience/);
-  await page.goto('/#lab');await expect(page.getByRole('heading',{name:'Less theory. More trying.'})).toBeVisible();
+  await page.goto('/#lab');await expect(page.getByRole('heading',{name:'ML lab'})).toBeVisible();
   await expect(page.getByRole('link',{name:'GitHub'})).toHaveAttribute('href','https://github.com/dunkelhaus');
   await expect(page.getByRole('link',{name:'LinkedIn'})).toHaveAttribute('href','https://linkedin.com/in/skjena');
   const pdf=await request.get('/suraj-jena-resume.pdf');expect(pdf.status()).toBe(200);expect((await pdf.body()).subarray(0,4).toString()).toBe('%PDF');
