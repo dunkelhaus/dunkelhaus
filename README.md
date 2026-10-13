@@ -1,33 +1,53 @@
-![](intro.jpg)
+# Suraj Jena — personal site
 
-Live version: https://learnwithjason.surge.sh (wait a little for the assets to load)
+A static Svelte 5 + TypeScript + Vite site, managed with **Bun 1.4.3**. Graphite, cyan, and magenta come from the supplied second molecular reference, **big**. The homepage presents selected professional experience; the lab is a new personal educational experiment, not an employer project.
 
-    git clone https://github.com/drcmda/learnwithjason
-    cd learnwithjason
-    yarn
-    yarn start
+## Development
 
-# What's this?
+Install Bun 1.4.3 using its official distribution or the npm-distributed `bun@1.4.3` package. In the prepared cloud environment it is available at `/workspace/bun-tools/node_modules/.bin/bun`.
 
-This is a demo Jason Lengstorf ([@jlengstorf](https://twitter.com/jlengstorf)) and I ([@0xca0a](https://twitter.com/0xca0a)) were building together in a [learn-with-jason episode on Twitch](https://www.twitch.tv/videos/477199412). We go into threejs a little, how to install three-fiber, what it is, how to create a simple scene, interaction, animation, game-loop fundamentals, lights, shadows, fog and how to load models.
+```sh
+export PATH=/workspace/bun-tools/node_modules/.bin:$PATH
+cd /workspace/dunkelhaus
+bun install --frozen-lockfile
+bun run dev
+```
 
-# Links
+Vite prints the development address. Each cloud task already has an isolated checkout; use it rather than creating a worktree unless requested. No credentials, database, backend, or external inference service are needed. Live processes must be restarted after restoring the environment.
 
-learn-with-jason: https://www.youtube.com/watch?v=1rP3nNY2hTo
+## Validation
 
-threejs: https://threejs.org
+```sh
+bun run check
+bun run test
+bun run build
+bun run test:browser
+bun run preview --port 4173 --strictPort
+```
 
-react-three-fiber: https://github.com/react-spring/react-three-fiber
+`test:browser` starts the production preview automatically, runs Playwright and axe accessibility checks, and captures review screenshots under `docs/review/`. It uses `/usr/bin/chromium` in this environment. Elsewhere set `CHROMIUM_PATH` to an installed Chromium binary. The browser tests exercise real training, evaluation, resets, cleanup, fallback, keyboard/touch controls, responsive layouts, and lazy loading. Unit tests cover the learning engine and worker runtime lifecycle.
 
-threejs fundamentals: https://threejsfundamentals.org
+## Content and design
 
-sketchfab: http://sketchfab.com
+- `src/lib/content.ts`: selected experience and contact destinations.
+- `src/App.svelte`: introduction, experience, lab, and about sections.
+- `src/styles.css`: design tokens, responsive composition, focus and motion rules.
+- `src/lib/Molecules.svelte`: static, deterministic vector interpretation of **big**, not a scientific simulation.
+- `public/suraj-jena-resume.pdf`: supplied resume, intentionally downloadable. Its original content is unchanged.
+- `src/lab/`: isolated learning engine, worker runtime, canvas view and controls.
 
-blender: https://www.blender.org
+Copy is grounded in the supplied LaTeX/PDF resume and LinkedIn export. LinkedIn's newer AI-tooling detail is included. Wells Fargo's end month differs between sources; year-level dates avoid making an unverified claim. Do not copy calculated tenure strings or invent metrics. Contact links use the supplied GitHub, LinkedIn, and email; telephone is omitted from page content (the original downloadable resume includes its original contact information). About's music interests come from the supplied reference brief.
 
-blender 2.8 intro: https://www.youtube.com/watch?v=jBqYTgaFDxU
+The earlier navy/violet/rose theme is superseded by **big**. The image was supplied in conversation, not as a separate local image asset. Palette values are approximate interpretations. Bright accent variants support text contrast; deeper magenta is decorative. Inter is self-hosted from Fontsource under OFL-1.1 (license included at public/licenses/inter.txt); no Google Fonts request is required.
 
+See [the experiment explanation](docs/experiment.md) and [review evidence](docs/review/validation.md). OpenSpec change: `rebuild-personal-website`.
 
-# Attributions
+## Delivery
 
-3d asset by Andrey Lukashov ([@overlaps](https://twitter.com/overlaps))/sketchfab: https://sketchfab.com/3d-models/space-exploration-wlp-series-8-91964c1ce1a34c3985b6257441efa500 GLTF data was compressed to draco via [gltf-pipeline](https://github.com/AnalyticalGraphicsInc/gltf-pipeline).
+`bun run build` emits static files in `dist/`. Asset paths use Vite's relative base. Deploy the complete output to a static host when requested. No production domain is assumed, and the old demo CNAME has been removed. Update owner-specific metadata if a production domain is selected. Deployment and environment publication are separate from a local build.
+
+### GitHub Pages
+
+The workflow in `.github/workflows/pages.yml` installs the pinned toolchain, checks types, runs engine tests, and builds/uploads `dist` on pushes to `master`. Enable **Settings → Pages → Build and deployment → Source: GitHub Actions**, then run **Actions → Deploy website to GitHub Pages → Run workflow** on `master`. Future pushes deploy automatically. The deployment step needs Pages enabled; the build can succeed before that setting is enabled.
+
+For this repository, the expected Pages address is `https://dunkelhaus.github.io/dunkelhaus/`. Relative Vite asset paths support the repository subpath, including the resume and worker chunks. No custom domain is configured.
