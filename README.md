@@ -19,10 +19,32 @@ Previously, I worked on chatbot intent classification at **Wells Fargo**, includ
 
 #### A few tools I work with
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/profile/toolkit-dark.svg">
-  <img src="docs/profile/toolkit-light.svg" width="635" alt="Python · Go · PyTorch · AWS · Svelte">
-</picture>
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-python-dark.svg">
+    <img src="docs/profile/tool-python-light.svg" width="128" height="44" alt="Python">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-go-dark.svg">
+    <img src="docs/profile/tool-go-light.svg" width="98" height="44" alt="Go">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-aws-dark.svg">
+    <img src="docs/profile/tool-aws-light.svg" width="114" height="44" alt="AWS">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-js-dark.svg">
+    <img src="docs/profile/tool-js-light.svg" width="90" height="44" alt="JS">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-pytorch-dark.svg">
+    <img src="docs/profile/tool-pytorch-light.svg" width="140" height="44" alt="PyTorch">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/profile/tool-mqtt-dark.svg">
+    <img src="docs/profile/tool-mqtt-light.svg" width="124" height="44" alt="MQTT">
+  </picture>
+</p>
 
 ---
 

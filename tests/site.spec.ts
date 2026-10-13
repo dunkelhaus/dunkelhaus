@@ -103,3 +103,16 @@ test('local fonts, visible interaction states, and loading presentation',async({
 test('font fallback keeps the first screen readable',async({page})=>{
   await page.route('**/*.woff2',r=>r.abort());await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();await expect(page.getByRole('link',{name:'Explore my work'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+test('experience lists separate engineering roles and earlier work',async({page})=>{
+  await page.goto('/#experience');
+  const rows=page.locator('.experience-row');await expect(rows).toHaveCount(7);
+  for(const role of ['Software Engineer 3','Software Engineer 2','Software Engineer 1','Machine Learning Engineer','Software Developer','Software Developer Intern','Research Intern']){
+    await expect(page.locator('.role').getByText(role,{exact:true})).toHaveCount(1);
+  }
+  await expect(rows.filter({hasText:'Research Intern'})).toContainText('Seceon Inc.');
+  await expect(rows.filter({hasText:'Software Developer Intern'})).toContainText('Persistent Systems');
+  await expect(rows.filter({hasText:'Software Engineer 2'})).toContainText('Aug 2023 — Mar 2025');
+  await expect(rows.filter({hasText:'Software Engineer 1'})).toContainText('Sep 2021 — Aug 2023');
+  const research=rows.filter({hasText:'Research Intern'});await research.locator('summary').click();await expect(research).toContainText('Prasant Mohapatra');
+});

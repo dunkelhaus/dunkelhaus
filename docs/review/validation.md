@@ -8,7 +8,7 @@ OpenSpec change: `rebuild-personal-website`. The old brain/CRA application is re
 - `bun run check`: zero errors and zero warnings.
 - `bun run test`: 11 tests passed across 2 files.
 - `bun run build`: successful production build.
-- `bun run test:browser`: 10 production-browser tests passed in Chromium.
+- `bun run test:browser`: 11 production-browser tests passed in Chromium.
 - No axe violations under the tested WCAG 2 A/AA, 2.1 A/AA, and 2.2 AA rule tags on desktop homepage, desktop playable, and mobile playable.
 - Keyboard and touch operation, minimum primary-control target dimensions, reduced motion, fragment navigation/back, valid resume download, local font loading and fallback, lazy experiment loading, invalid reward rejection, reset during training, visibility pause, reopening, worker failure/retry, module download failure/reload, and unavailable-canvas fallback exercised.
 - The development server was separately started using the saved instructions; Chromium rendered the introduction and launched the playable without page errors.
