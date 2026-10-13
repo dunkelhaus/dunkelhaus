@@ -77,7 +77,7 @@
             <span class="row-number">{item.number}</span>
             <strong class="company-name">
               {#if item.logo}
-                <img class="company-logo" src={`${import.meta.env.BASE_URL}companies/${item.logo}`} width="32" height="32" alt="" loading="lazy" />
+                <img class="company-logo" class:seceon-logo={item.logo === "seceon.webp"} src={`${import.meta.env.BASE_URL}companies/${item.logo}`} width="32" height="32" alt="" loading="lazy" />
               {/if}
               <span>{item.company}</span>
             </strong>

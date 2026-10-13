@@ -119,14 +119,15 @@ test('experience lists separate engineering roles and earlier work',async({page}
 
 test('experience company logos load locally alongside visible names',async({page})=>{
   await page.goto('/#experience');
-  const logos=page.locator('.company-logo');await expect(logos).toHaveCount(6);
+  const logos=page.locator('.company-logo');await expect(logos).toHaveCount(7);
   for(const image of await logos.all()){
     await image.scrollIntoViewIfNeeded();await expect(image).toHaveJSProperty('complete',true);
     expect(await image.evaluate((e:HTMLImageElement)=>e.naturalWidth)).toBeGreaterThan(0);
     await expect(image).toHaveAttribute('alt','');
   }
   const records=await page.locator('.company-name').evaluateAll(es=>es.map(e=>({name:e.textContent?.trim(),src:e.querySelector('img')?.getAttribute('src')})));
-  for(const [company,file] of [['Comcast','comcast.svg'],['Wells Fargo · Persistent Systems','wells-fargo.svg'],['Persistent Systems','persistent.svg']]){
+  for(const [company,file] of [['Comcast','comcast.svg'],['Wells Fargo · Persistent Systems','wells-fargo.svg'],['Persistent Systems','persistent.svg'],['Seceon Inc.','seceon.webp']]){
     expect(records.some(r=>r.name===company&&r.src?.endsWith(file))).toBe(true);
   }
+  await page.locator('.experience-row').filter({hasText:'Research Intern'}).screenshot({path:'docs/review/seceon-logo.png'});
 });

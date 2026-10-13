@@ -1046,3 +1046,5 @@ footer nav a {
   .experience-meta .row-number { align-self: center; }
   .experience-meta .experience-period { grid-column: 2; }
 }
+
+.company-logo.seceon-logo { filter: brightness(1.85); }

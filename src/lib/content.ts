@@ -80,7 +80,7 @@ export const experience = [
   {
     number: "07",
     company: "Seceon Inc.",
-    logo: null,
+    logo: "seceon.webp",
     period: "May 2017 — Oct 2017",
     role: "Research Intern",
     title: "Graph-based insider threat detection",
