@@ -44,10 +44,10 @@ See [the experiment explanation](experiment.md) and [review evidence](review/val
 
 ## Delivery
 
-`bun run build` emits static files in `dist/`. Asset paths use Vite's relative base. Deploy the complete output to a static host when requested. No production domain is assumed, and the old demo CNAME has been removed. Update owner-specific metadata if a production domain is selected. Deployment and environment publication are separate from a local build.
+`bun run build` emits static files in `dist/`. Asset paths use Vite's relative base. The production domain is `dunkel.haus`; `public/CNAME` is copied to `dist/CNAME`, and canonical/Open Graph URLs use `https://dunkel.haus/`. Deployment and environment publication are separate from a local build.
 
 ### GitHub Pages
 
 The workflow in `.github/workflows/pages.yml` installs the pinned toolchain, checks types, runs engine tests, and builds/uploads `dist` on pushes to `master`. Enable **Settings → Pages → Build and deployment → Source: GitHub Actions**, then run **Actions → Deploy website to GitHub Pages → Run workflow** on `master`. Future pushes deploy automatically. The deployment step needs Pages enabled; the build can succeed before that setting is enabled.
 
-For this repository, the expected Pages address is `https://dunkelhaus.github.io/dunkelhaus/`. Relative Vite asset paths support the repository subpath, including the resume and worker chunks. No custom domain is configured.
+The website address is `https://dunkel.haus/`. Set **Settings → Pages → Custom domain** to `dunkel.haus`, configure the domain's DNS for GitHub Pages, and enable **Enforce HTTPS** once available. Actions-based publishing uses the repository's Pages custom-domain setting; the CNAME file alone does not apply that setting. Relative Vite asset paths work both at the custom-domain root and at the repository subpath, including the resume and worker chunks.

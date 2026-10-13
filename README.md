@@ -9,7 +9,7 @@ I’m a software engineer at **Comcast**, based in **Austin, Texas**. I work acr
 
 Previously, I worked on chatbot intent classification at **Wells Fargo**, including Python ML pipelines and model explainability. I studied computer science at **UC Davis**.
 
-[Website](https://dunkelhaus.github.io/dunkelhaus/) · [LinkedIn](https://www.linkedin.com/in/skjena/) · [Résumé](public/suraj-jena-resume.pdf)
+[Website](https://dunkel.haus/) · [LinkedIn](https://www.linkedin.com/in/skjena/) · [Résumé](public/suraj-jena-resume.pdf)
 
 #### Areas of work
 
