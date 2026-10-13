@@ -21,7 +21,7 @@ Previously, I worked on chatbot intent classification at **Wells Fargo**, includ
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/profile/toolkit-dark.svg">
-  <img src="docs/profile/toolkit-light.svg" width="635" alt="Python · Go · PyTorch · AWS · Svelte">
+  <img src="docs/profile/toolkit-light.svg" width="635" alt="Python · Go · PyTorch · AWS · Node">
 </picture>
 
 ---
