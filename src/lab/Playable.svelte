@@ -115,7 +115,7 @@
       y: py + Math.floor(s / WIDTH) * size + size / 2,
     });
     c.clearRect(0, 0, 600, 470);
-    c.fillStyle = "#252525";
+    c.fillStyle = "#000000";
     c.fillRect(0, 0, 600, 470);
     c.font = "10px monospace";
     c.fillStyle = "#bcbcbc";
@@ -159,7 +159,7 @@
         c.lineTo(p.x - 19, p.y);
         c.closePath();
         c.fill();
-        c.fillStyle = "#252525";
+        c.fillStyle = "#000000";
         c.font = "bold 11px sans-serif";
         c.textAlign = "center";
         c.fillText("G", p.x, p.y + 4);

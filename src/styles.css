@@ -9,10 +9,10 @@
 :root {
   font-family: "Inter Variable", Inter, system-ui, sans-serif;
   color: #f3f3f5;
-  background: #303030;
+  background: #000000;
   font-synthesis: none;
-  --bg: #303030;
-  --panel: #292929;
+  --bg: #000000;
+  --panel: #111111;
   --text: #f3f3f5;
   --muted: #bcbcbc;
   --cyan: #00b8c8;
@@ -577,7 +577,7 @@ footer nav a {
   width: 100%;
   height: auto;
   display: block;
-  background: #252525;
+  background: #000000;
 }
 .canvas-wrap .map-legend {
   padding: 16px 8px;
@@ -604,7 +604,7 @@ footer nav a {
 .reward-control input {
   width: 90px;
   min-height: 44px;
-  background: #303030;
+  background: #1a1a1a;
   border: 1px solid #888;
   color: var(--text);
   padding: 8px 12px;

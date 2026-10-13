@@ -66,3 +66,9 @@ Reviewed homepage composition and typography at 360, 768, and 1440px, plus deskt
 Browser checks ran in Chromium, not Safari or Firefox. Employment dates that conflict between source documents use year-level precision; page claims are source-backed. The original supplied resume intentionally remains downloadable with its original contact details; page copy omits telephone. Public assets include the supplied resume, site icon, font license, and locally stored company logos with source/license notes; other attachments are not published. Existing OpenSpec artifacts and unrelated user files were preserved, and the prior ignored CRA build generated during onboarding was removed.
 
 The static build and development server are locally ready. No deployment, production-domain choice, environment publication, or OpenSpec archive was performed. Review and save the new environment draft, then publish it to retain the updated snapshot and setup for future tasks. A production host can be selected separately.
+
+## Pure black background update
+
+The website and both GitHub profile banners now use `#000000`. Website panels use `#111111`, reward inputs use `#1a1a1a`, and the playable canvas uses black. Cyan/magenta accents and text colors remain unchanged. The contrast figures above describe the original graphite version.
+
+Rechecked with `bun run check`, `bun run build`, and the responsive/accessibility, real-training, and mobile-touch Playwright tests: all passed. Homepage and desktop/mobile playable screenshots were refreshed. Earlier Lighthouse measurements and other screenshots remain historical.

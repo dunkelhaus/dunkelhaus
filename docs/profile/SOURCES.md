@@ -7,3 +7,5 @@ Python, Go, AWS, JavaScript, and PyTorch logo artwork: [Devicon](https://github.
 MQTT logo artwork: [Simple Icons](https://github.com/simple-icons/simple-icons/blob/develop/icons/mqtt.svg), under [CC0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md).
 
 Brand names and logos belong to their respective owners. These badges identify tools used; they do not indicate endorsement. No runtime image service or JavaScript is used.
+
+Both profile header variants use a pure black (`#000000`) background with the same light text, so the banner stays consistent in GitHub light and dark themes. Tool badges retain their theme-specific surfaces.
