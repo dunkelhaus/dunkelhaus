@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 test('personal introduction, navigation, contacts, and resume', async ({page,request})=>{
   await page.goto('/');
   await expect(page).toHaveTitle(/Suraj Jena/);
-  await expect(page.getByRole('heading',{level:1})).toContainText('Software engineer.');
+  await expect(page.getByRole('heading',{level:1})).toHaveText('Suraj Jena');
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Experience'}).click();
   await expect(page).toHaveURL(/#experience/);
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'About'}).click();

@@ -25,12 +25,9 @@
       <div class="eyebrow hero-eyebrow">
         <span class="tiny-dot"></span> SOFTWARE ENGINEER / AUSTIN, TX
       </div>
-      <h1 id="hero-title">
-        Software engineer.<br />
-        <span class="cyan-text">Machine learning.</span>
-      </h1>
+      <h1 id="hero-title">Suraj Jena</h1>
       <p class="hero-description">
-        I’m Suraj, a software engineer in Austin. My work spans machine learning,
+        I’m a software engineer in Austin. My work spans machine learning,
         event-driven systems, and engineering tools.
       </p>
       <div class="hero-actions">

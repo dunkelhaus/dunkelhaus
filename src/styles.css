@@ -202,9 +202,9 @@ footer nav {
   padding-bottom: 116px;
 }
 .hero h1 {
-  font-size: clamp(42px, 4.8vw, 68px);
+  font-size: clamp(32px, 3vw, 42px);
   line-height: 1.09;
-  letter-spacing: -3.8px;
+  letter-spacing: -1.5px;
   margin: 24px 0 28px;
   white-space: nowrap;
 }
@@ -672,10 +672,6 @@ footer nav a {
   .site-header {
     width: calc(100% - 64px);
   }
-  .hero h1 {
-    font-size: 50px;
-    letter-spacing: -2.8px;
-  }
   .hero {
     grid-template-columns: 1.45fr 1fr;
     gap: 0;
@@ -720,10 +716,6 @@ footer nav a {
     grid-template-columns: 1fr;
     gap: 32px;
     padding-bottom: 100px;
-  }
-  .hero h1 {
-    font-size: clamp(40px, 7.5vw, 60px);
-    letter-spacing: -2.8px;
   }
   .hero-art {
     position: absolute;
@@ -843,8 +835,8 @@ footer nav a {
     align-items: start;
   }
   .hero h1 {
-    font-size: 39px;
-    letter-spacing: -2.3px;
+    font-size: 32px;
+    letter-spacing: -1px;
     white-space: normal;
     line-height: 1.12;
     margin: 22px 0;
