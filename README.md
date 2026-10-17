@@ -1,7 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/profile/header-dark.svg">
-  <img src="docs/profile/header-light.svg" width="100%" alt="Suraj Jena — Software engineer in Austin.">
-</picture>
+<img align="right" src="docs/profile/pattern.svg" width="144" height="144" alt="" hspace="16">
 
 ### Hi, I’m Suraj.
 
@@ -10,6 +7,8 @@ I’m a software engineer at **Comcast**, based in **Austin, Texas**. I work acr
 Previously, I worked on chatbot intent classification at **Wells Fargo**, including Python ML pipelines and model explainability. I studied computer science at **UC Davis**.
 
 [Website](https://dunkelhaus.github.io/dunkelhaus/) · [LinkedIn](https://www.linkedin.com/in/skjena/) · [Résumé](public/suraj-jena-resume.pdf)
+
+<br clear="both">
 
 #### Areas of work
 

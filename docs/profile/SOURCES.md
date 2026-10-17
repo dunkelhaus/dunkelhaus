@@ -8,4 +8,4 @@ MQTT logo artwork: [Simple Icons](https://github.com/simple-icons/simple-icons/b
 
 Brand names and logos belong to their respective owners. These badges identify tools used; they do not indicate endorsement. No runtime image service or JavaScript is used.
 
-Both profile header variants use a pure black (`#000000`) background with the same light text, so the banner stays consistent in GitHub light and dark themes. Tool badges retain their theme-specific surfaces.
+The README uses a small, right-aligned `pattern.svg` beside the introduction. It reuses the original cyan/magenta vector artwork from the former banner, with a transparent background for GitHub light and dark themes. Tool badges retain their theme-specific surfaces.
