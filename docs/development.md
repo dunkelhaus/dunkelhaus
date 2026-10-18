@@ -1,6 +1,6 @@
 # Suraj Jena — personal site
 
-A static Svelte 5 + TypeScript + Vite site, managed with **Bun 1.4.3**. Graphite, cyan, and magenta come from the supplied second molecular reference, **big**. The homepage presents selected professional experience; the lab is a new personal educational experiment, not an employer project.
+A static Svelte 5 + TypeScript + Vite site, managed with **Bun 1.4.3**. Graphite, cyan, and magenta come from the supplied second molecular reference, **big**. The homepage presents selected professional experience; articles at `/lab/` are hands-on educational experiments, not employer projects.
 
 ## Development
 
@@ -25,16 +25,29 @@ bun run test:browser
 bun run preview --port 4173 --strictPort
 ```
 
-`test:browser` starts the production preview automatically, runs Playwright and axe accessibility checks, and captures review screenshots under `docs/review/`. It uses `/usr/bin/chromium` in this environment. Elsewhere set `CHROMIUM_PATH` to an installed Chromium binary. The browser tests exercise real training, evaluation, resets, cleanup, fallback, keyboard/touch controls, responsive layouts, and lazy loading. Unit tests cover the learning engine and worker runtime lifecycle.
+`test:browser` starts the production preview automatically, runs Playwright and axe accessibility checks, and captures review screenshots under `docs/review/`. Set `CHROMIUM_PATH` to an installed Chromium binary when Playwright has no bundled browser. The browser tests exercise real training, evaluation, resets, cleanup, fallback, keyboard/touch controls, responsive layouts, and lazy loading. A smoke pass visits every built page (homepage, `/lab/` index, each registered article), checks front-matter titles, typeset math, mounted figures, and zero console errors or failed requests, and asserts the homepage requests no article, vendor, or KaTeX assets. Unit tests cover the learning engine, worker runtime lifecycle, and the article registry and figure helper.
 
 ## Content and design
 
 - `src/lib/content.ts`: selected experience and contact destinations.
-- `src/App.svelte`: introduction, experience, lab, and about sections.
+- `src/App.svelte`: introduction, experience, and about sections.
 - `src/styles.css`: design tokens, responsive composition, focus and motion rules.
 - `src/lib/Molecules.svelte`: static, deterministic vector interpretation of **big**, not a scientific simulation.
 - `public/suraj-jena-resume.pdf`: supplied resume, intentionally downloadable. Its original content is unchanged.
 - `src/lab/`: isolated learning engine, worker runtime, canvas view and controls.
+
+See [the experiment explanation](experiment.md) and [review evidence](review/validation.md). OpenSpec change: `rebuild-personal-website`.
+
+## Lab articles
+
+Articles live at `/lab/<slug>/`, listed by the `/lab/` index. They are plain HTML pages rendered by the vendored distill template:
+
+- `src/lib/articles.ts`: the article registry. Each entry (slug, title, published date, description) adds one page. Unit tests cross-check the registry against `lab/` on disk, and the smoke pass derives its page list from the registry.
+- `lab/<slug>/index.html`: the page itself. Front matter (`d-front-matter` with title, description, published, authors, and KaTeX delimiters), the site header, and the `d-title`/`d-byline`/`d-article` structure.
+- `src/articles/`: the article page entry (`main.ts`), the figure mount helper (`mount-figure.ts`), and the per-article figure registry (`figures.ts`). A figure is written as `<d-figure data-figure="id">` with a `[data-figure-body]` slot and a caption. The registry maps the id to a dynamic import, and the component mounts when the figure nears the viewport. `PlaygroundFigure.svelte` gates `src/lab/Playable.svelte`, so the experiment downloads only after the reader starts it.
+- `src/article-theme.css`: the site's dark theme applied over the template. Template-internal colors of shadow-DOM elements (`d-math`, `d-cite`, hover boxes) are parameterized as `--article-*` custom properties, so theme changes stay in tokens.
+
+The template and its third-party assets are vendored into `public/vendor/` by `node scripts/vendor-distill.mjs`. The build runs it first. The script records provenance, verifies the committed set when upstream is unreachable, and is byte-stable across runs.
 
 Copy is grounded in the supplied LaTeX/PDF resume and LinkedIn export. LinkedIn's newer AI-tooling detail is included. Wells Fargo's end month differs between sources; year-level dates avoid making an unverified claim. Do not copy calculated tenure strings or invent metrics. Contact links use the supplied GitHub, LinkedIn, and email; telephone is omitted from page content (the original downloadable resume includes its original contact information). About's music interests come from the supplied reference brief.
 

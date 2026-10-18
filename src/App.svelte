@@ -1,23 +1,12 @@
 <script lang="ts">
   import Arrow from "./lib/Arrow.svelte";
   import Molecules from "./lib/Molecules.svelte";
-  import LabShell from "./lib/LabShell.svelte";
+  import SiteHeader from "./lib/SiteHeader.svelte";
+  import SiteFooter from "./lib/SiteFooter.svelte";
   import { experience, links } from "./lib/content";
 </script>
 
-<a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header">
-  <a class="wordmark" href="#home" aria-label="Suraj Jena home"
-    ><span class="brand-symbol" aria-hidden="true"><i></i><i></i></span> Suraj
-    Jena<span class="wordmark-period">.</span></a
-  >
-  <nav aria-label="Main navigation">
-    <a href="#experience">Experience</a><a href="#lab"
-      >Lab <span class="nav-dot" aria-hidden="true"></span></a
-    ><a href="#about">About</a>
-  </nav>
-  <a class="header-contact" href={links.email}>Contact <Arrow /></a>
-</header>
+<SiteHeader brandHref="#home" experienceHref="#experience" labHref="./lab/" aboutHref="#about" />
 
 <main id="main">
   <section class="hero section-wrap" id="home" aria-labelledby="hero-title">
@@ -99,22 +88,9 @@
     </div>
   </section>
 
-  <section class="lab section-wrap" id="lab" aria-labelledby="lab-title">
-    <div class="section-heading">
-      <div>
-        <span class="eyebrow">02 / THE LAB</span>
-        <h2 id="lab-title">ML lab</h2>
-      </div>
-      <p>
-        Interactive experiments in machine learning.
-      </p>
-    </div>
-    <LabShell />
-  </section>
-
   <section class="about section-wrap" id="about" aria-labelledby="about-title">
     <div class="about-label">
-      <span class="eyebrow">03 / ABOUT</span>
+      <span class="eyebrow">02 / ABOUT</span>
       <div class="about-symbol" aria-hidden="true">
         <span></span><span></span>
       </div>
@@ -138,18 +114,4 @@
   </section>
 </main>
 
-<footer class="section-wrap">
-  <div>
-    <a class="wordmark" href="#home"
-      >Suraj Jena<span class="wordmark-period">.</span></a
-    >
-  </div>
-  <nav aria-label="Social links">
-    <a href={links.github}>GitHub <Arrow /></a><a href={links.linkedin}
-      >LinkedIn <Arrow /></a
-    ><a href={links.email}>Email <Arrow /></a>
-  </nav>
-  <a class="back-top" href="#home" aria-label="Back to top"
-    ><Arrow direction="up" /></a
-  >
-</footer>
+<SiteFooter brandHref="#home" backHref="#home" />

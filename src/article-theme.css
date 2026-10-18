@@ -1,0 +1,257 @@
+/*
+ * Article theme layer for distill-template pages.
+ *
+ * Loaded AFTER the vendored template script, so its rules come later in the
+ * cascade and win ties against the template's styles. It translates the site
+ * tokens (near-black background, off-white text, cyan links and focus, magenta
+ * citations, Inter through the site stylesheet) while keeping the template's
+ * layout grid, figure breakouts, footnote and citation behavior, and print
+ * handling intact.
+ *
+ * Shadow-bound template surfaces are restyled through CSS custom properties the
+ * vendored template falls back on (--article-*); when unset, they restore the
+ * upstream light look.
+ */
+
+:root {
+  --article-math-color: var(--text);
+  --article-citation-color: var(--pink-text);
+  --article-surface-color: var(--panel);
+  --article-panel-border: var(--border);
+  --article-muted-color: var(--muted);
+}
+
+/* Body copy: the template sizes type relative to html font-size; keep its
+   scale and restyle only color. */
+d-article {
+  color: var(--text);
+  border-top-color: var(--border);
+}
+
+d-article,
+d-byline,
+d-appendix {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Links: template ships light-theme blues at three specificities. */
+a {
+  color: var(--cyan-text);
+}
+
+d-article a {
+  color: var(--cyan-text);
+  border-bottom: 1px solid rgba(0, 184, 200, 0.45);
+}
+
+d-article a:hover,
+d-article a:focus-visible {
+  color: var(--cyan-text);
+  border-bottom-color: var(--cyan-text);
+}
+
+/* Headings keep template metrics; hairlines follow the site border token. */
+d-article h2 {
+  border-bottom-color: var(--border);
+}
+
+d-article .marker span {
+  border-bottom-color: var(--border);
+}
+
+d-article .marker:hover span {
+  color: var(--cyan-text);
+  border-bottom-color: var(--cyan-text);
+}
+
+/* Margin asides and blockquotes */
+d-article aside {
+  color: var(--muted);
+}
+
+d-article blockquote {
+  border-left-color: var(--border);
+  color: var(--muted);
+}
+
+/* Figures and captions */
+figcaption,
+d-article .figcaption {
+  color: var(--muted);
+}
+
+figcaption a {
+  color: var(--cyan-text);
+}
+
+figcaption b,
+figcaption strong {
+  color: var(--text);
+}
+
+figure.external img {
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* Tables */
+d-article table {
+  border-bottom-color: var(--border);
+}
+
+d-article table th {
+  border-bottom-color: var(--border);
+}
+
+d-article table td {
+  border-bottom-color: rgba(243, 243, 245, 0.08);
+}
+
+/* Byline */
+d-byline {
+  border-top-color: var(--border);
+}
+
+d-byline h3 {
+  color: var(--muted);
+}
+
+d-byline p {
+  color: var(--text);
+}
+
+d-byline a,
+d-article d-byline a {
+  color: var(--cyan-text);
+  border-bottom: none;
+}
+
+/* The display equation overflows on narrow screens; its scrollable d-math
+   region carries tabindex=0 so keyboard users can scroll it (a11y fix for
+   axe's scrollable-region-focusable), and the site-consistent focus ring below
+   keeps the stop visible. */
+d-math:focus-visible {
+  outline: 2px solid var(--cyan-text);
+  outline-offset: 3px;
+}
+
+/* The template always renders a third byline column for a DOI; our articles
+   carry none (the vendor patch hides the placeholder paragraph), so drop the
+   column itself. Revisit if an article ever sets a DOI in its front matter. */
+d-byline .byline > div:nth-child(3) {
+  display: none;
+}
+
+/* Appendix, footnotes list, and references */
+d-appendix {
+  border-top-color: var(--border);
+  color: var(--muted);
+}
+
+d-appendix h3 {
+  color: var(--muted);
+}
+
+d-appendix a {
+  color: var(--cyan-text);
+}
+
+d-footnote-list a.footnote-backlink {
+  color: rgba(95, 218, 225, 0.65);
+}
+
+d-footnote-list a.footnote-backlink:hover {
+  color: var(--cyan-text);
+}
+
+/* Print: the light, text-first override required for readable PDF output.
+   Custom properties retheme the shadow-bound surfaces too. */
+@media print {
+  :root {
+    --article-math-color: #1a1a1a;
+    --article-citation-color: #004276;
+    --article-surface-color: #ffffff;
+    --article-panel-border: #dddddd;
+    --article-muted-color: #555555;
+  }
+
+  :root,
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+
+  d-article {
+    color: #1a1a1a;
+    border-top-color: #dddddd;
+  }
+
+  a,
+  d-article a,
+  d-byline a,
+  d-article d-byline a,
+  d-article d-appendix a,
+  figcaption a,
+  d-appendix a {
+    color: #004276;
+  }
+
+  d-article a {
+    border-bottom-color: rgba(0, 66, 118, 0.4);
+  }
+
+  d-article h2 {
+    border-bottom-color: #dddddd;
+  }
+
+  d-article .marker span {
+    border-bottom-color: #dddddd;
+  }
+
+  d-article .marker:hover span {
+    color: #1a1a1a;
+    border-bottom-color: #dddddd;
+  }
+
+  d-article aside,
+  d-article blockquote,
+  d-byline h3,
+  d-byline p,
+  d-appendix,
+  d-appendix h3,
+  figcaption,
+  d-article .figcaption {
+    color: #555555;
+  }
+
+  figcaption b,
+  figcaption strong {
+    color: #1a1a1a;
+  }
+
+  d-article table {
+    border-bottom-color: #dddddd;
+  }
+
+  d-article table th {
+    border-bottom-color: #dddddd;
+  }
+
+  d-article table td {
+    border-bottom-color: #eeeeee;
+  }
+
+  d-appendix {
+    border-top-color: #dddddd;
+  }
+
+  d-footnote-list a.footnote-backlink {
+    color: #004276;
+  }
+
+  figure.external img {
+    background: #ffffff;
+    border-color: #dddddd;
+  }
+}
