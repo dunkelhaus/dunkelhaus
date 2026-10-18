@@ -58,10 +58,14 @@ test("/lab/reward-design/ renders the distill article chrome", async ({
     "Designing rewards for a small learning agent",
   );
   const byline = page.locator("d-byline .byline");
-  await expect(byline).toContainText("Authors");
-  await expect(byline.locator(".name")).toHaveText("Suraj Jena");
-  await expect(byline.locator("p.affiliation")).toHaveText("Austin, TX");
-  await expect(byline).toContainText("Oct. 18, 2026");
+  await expect(byline.locator("> div:nth-child(2)")).toContainText(
+    "Oct. 18, 2026",
+  );
+  // The byline shows only the publication date: author, affiliation, and DOI
+  // columns are dropped by the theme layer.
+  await expect(byline.locator(".authors-affiliations")).toBeHidden();
+  await expect(byline.locator("> div:nth-child(3)")).toBeHidden();
+  await expect(byline).toContainText("Published");
   const nav = page.getByRole("navigation", { name: "Main navigation" });
   await expect(nav.getByRole("link", { name: /Lab/ })).toHaveAttribute(
     "aria-current",

@@ -143,26 +143,38 @@ d-byline .byline > div:nth-child(3) {
   display: none;
 }
 
-/* Appendix, footnotes list, and references */
-d-appendix {
+/* Appendix, footnotes list, and references.
+   These templates inject <style> rules into the elements themselves at
+   runtime — later in the cascade than this stylesheet, at equal specificity —
+   so the overrides carry a higher-specificity body scope to win. */
+body d-appendix {
   border-top-color: var(--border);
   color: var(--muted);
 }
 
-d-appendix h3 {
+body d-appendix h3 {
   color: var(--muted);
 }
 
-d-appendix a {
+body d-appendix a {
   color: var(--cyan-text);
 }
 
-d-footnote-list a.footnote-backlink {
-  color: rgba(95, 218, 225, 0.65);
+body d-appendix d-footnote-list a.footnote-backlink {
+  color: rgba(95, 218, 225, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-d-footnote-list a.footnote-backlink:hover {
+body d-appendix d-footnote-list a.footnote-backlink:hover {
   color: var(--cyan-text);
+  text-decoration: underline;
+}
+
+/* Requested: the byline shows only the publication date — author and
+   affiliation columns are dropped (as is the DOI column above). */
+d-byline .byline > div:nth-child(1) {
+  display: none;
 }
 
 /* Print: the light, text-first override required for readable PDF output.
@@ -246,8 +258,22 @@ d-footnote-list a.footnote-backlink:hover {
     border-top-color: #dddddd;
   }
 
-  d-footnote-list a.footnote-backlink {
+  body d-appendix {
+    border-top-color: #dddddd;
+    color: #555555;
+  }
+
+  body d-appendix h3 {
+    color: #555555;
+  }
+
+  body d-appendix a {
     color: #004276;
+  }
+
+  body d-appendix d-footnote-list a.footnote-backlink {
+    color: #004276;
+    text-decoration: underline;
   }
 
   figure.external img {
