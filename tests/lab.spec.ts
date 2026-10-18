@@ -170,7 +170,7 @@ test("/lab/reward-design/ presents the shared dark identity at reference widths"
     expect(contrast.color).toBe("rgb(243, 243, 245)");
     expect(contrast.background).toBe("rgb(0, 0, 0)");
     await page.screenshot({
-      path: `docs/review/article-${width}.png`,
+      path: `test-results/review/article-${width}.png`,
       fullPage: true,
     });
   }
@@ -195,7 +195,7 @@ test("/lab/ stays responsive at reference widths", async ({ page }) => {
         }),
       );
     expect(targets.filter((t) => t.visible).every((t) => t.height >= 44)).toBe(true);
-    await page.screenshot({ path: `docs/review/lab-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `test-results/review/lab-${width}.png`, fullPage: true });
   }
 });
 
@@ -230,7 +230,7 @@ test("figure training flow: real episodes, policy, settings, and relaunching", a
   await expect(page.getByTestId("episodes")).toHaveText("0");
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(results.violations).toEqual([]);
-  await page.screenshot({ path: "docs/review/playable-1440.png", fullPage: true });
+  await page.screenshot({ path: "test-results/review/playable-1440.png", fullPage: true });
   expect(errors).toEqual([]);
 });
 
@@ -281,7 +281,7 @@ test("figure keyboard controls, invalid input, visibility pause, and reset durin
     await expect(b).toBeFocused();
     await page.keyboard.press("Space");
   }
-  await page.screenshot({ path: "docs/review/controls-focus.png", fullPage: true });
+  await page.screenshot({ path: "test-results/review/controls-focus.png", fullPage: true });
 });
 
 test("figure touch controls and reduced motion at mobile width", async ({ browser }) => {
@@ -303,7 +303,7 @@ test("figure touch controls and reduced motion at mobile width", async ({ browse
       }),
     );
   expect(targets.filter((t) => t.visible).every((t) => t.width >= 44 && t.height >= 44)).toBe(true);
-  await page.screenshot({ path: "docs/review/playable-360.png", fullPage: true });
+  await page.screenshot({ path: "test-results/review/playable-360.png", fullPage: true });
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(results.violations).toEqual([]);
   await context.close();
@@ -327,7 +327,7 @@ test("figure worker failure is recoverable and does not block the page", async (
   await page.locator("d-figure[data-figure]").scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Launch experiment" }).click();
   await expect(page.getByRole("alert")).toContainText("Learning engine unavailable");
-  await page.screenshot({ path: "docs/review/worker-error.png", fullPage: true });
+  await page.screenshot({ path: "test-results/review/worker-error.png", fullPage: true });
   await page.getByRole("button", { name: "Retry experiment" }).click();
   await expect(page.getByRole("button", { name: "Train agent" })).toBeEnabled();
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "About" }).click();
@@ -367,6 +367,6 @@ test("figure shows a launch progress state while the module downloads", async ({
   await page.locator("d-figure[data-figure]").scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Launch experiment" }).click();
   await expect(page.getByText("Preparing experiment…")).toBeVisible();
-  await page.screenshot({ path: "docs/review/loading.png", fullPage: true });
+  await page.screenshot({ path: "test-results/review/loading.png", fullPage: true });
   await expect(page.getByRole("button", { name: "Train agent" })).toBeEnabled();
 });

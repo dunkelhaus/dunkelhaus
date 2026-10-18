@@ -46,5 +46,3 @@ Previously, I worked on chatbot intent classification at **Wells Fargo**, includ
 </p>
 
 ---
-
-<sub>This repository also powers my personal website. [Development & deployment guide](docs/development.md).</sub>

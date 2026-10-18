@@ -23,7 +23,7 @@ test('responsive composition, accessibility, and reference screenshots',async({p
     await page.setViewportSize({width,height:1000});await page.goto('/');await page.evaluate(()=>document.fonts.ready);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const links=await page.locator('.site-header a,.hero-actions a,.hero-bottom a,footer a').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return {width:r.width,height:r.height};}));expect(links.filter(r=>r.width>0).every(r=>r.width>=44&&r.height>=44)).toBe(true);
-    await page.screenshot({path:`docs/review/home-${width}.png`,fullPage:true});
+    await page.screenshot({path:`test-results/review/home-${width}.png`,fullPage:true});
   }
   const results=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
   expect(results.violations).toEqual([]);
@@ -35,8 +35,8 @@ test('responsive composition, accessibility, and reference screenshots',async({p
 test('local fonts, visible interaction states, and loading presentation',async({page})=>{
   const remote:string[]=[];page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:4173'))remote.push(r.url());});
   await page.goto('/');await page.evaluate(()=>document.fonts.ready);expect(remote).toEqual([]);
-  const button=page.getByRole('link',{name:'Explore my work'});await button.hover();await page.screenshot({path:'docs/review/hero-hover.png'});await button.focus();await page.screenshot({path:'docs/review/hero-focus.png'});
-  const box=await button.boundingBox();if(!box)throw new Error('Missing button');await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.screenshot({path:'docs/review/hero-pressed.png'});await page.mouse.up();
+  const button=page.getByRole('link',{name:'Explore my work'});await button.hover();await page.screenshot({path:'test-results/review/hero-hover.png'});await button.focus();await page.screenshot({path:'test-results/review/hero-focus.png'});
+  const box=await button.boundingBox();if(!box)throw new Error('Missing button');await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.screenshot({path:'test-results/review/hero-pressed.png'});await page.mouse.up();
 });
 
 test('font fallback keeps the first screen readable',async({page})=>{
@@ -68,5 +68,5 @@ test('experience company logos load locally alongside visible names',async({page
   for(const [company,file] of [['Comcast','comcast.svg'],['Wells Fargo · Persistent Systems','wells-fargo.svg'],['Persistent Systems','persistent.svg'],['Seceon Inc.','seceon.webp']]){
     expect(records.some(r=>r.name===company&&r.src?.endsWith(file))).toBe(true);
   }
-  await page.locator('.experience-row').filter({hasText:'Research Intern'}).screenshot({path:'docs/review/seceon-logo.png'});
+  await page.locator('.experience-row').filter({hasText:'Research Intern'}).screenshot({path:'test-results/review/seceon-logo.png'});
 });
