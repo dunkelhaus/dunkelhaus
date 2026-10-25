@@ -96,6 +96,41 @@ figure.external img {
 }
 
 /* Tables */
+/* Wide measurements stay inside the article column on small screens. */
+d-article .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+d-article .figure-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+d-article .figure-controls label {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+d-article .figure-controls select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0.5rem;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+d-article .table-scroll:focus-visible,
+d-article .figure-controls select:focus-visible {
+  outline: 2px solid var(--cyan-text);
+  outline-offset: 3px;
+}
+
 d-article table {
   border-bottom-color: var(--border);
 }
@@ -158,6 +193,11 @@ body d-appendix h3 {
 
 body d-appendix a {
   color: var(--cyan-text);
+}
+
+/* Bibliography links also need a non-color cue, including injected DOI links. */
+body d-appendix #references-list a {
+  border-bottom: 1px solid var(--cyan-text);
 }
 
 body d-appendix d-footnote-list a.footnote-backlink {

@@ -3,7 +3,7 @@ export const experience = [
     number: "01",
     company: "Comcast",
     logo: "comcast.svg",
-    period: "Mar 2025 — present",
+    period: "2025 — present",
     role: "Software Engineer 3",
     title: "Smart-home behavior modeling",
     summary:
@@ -16,7 +16,7 @@ export const experience = [
     number: "02",
     company: "Comcast",
     logo: "comcast.svg",
-    period: "Aug 2023 — Mar 2025",
+    period: "2023 — 2025",
     role: "Software Engineer 2",
     title: "Event-driven smart-home infrastructure",
     summary:
@@ -29,7 +29,7 @@ export const experience = [
     number: "03",
     company: "Comcast",
     logo: "comcast.svg",
-    period: "Sep 2021 — Aug 2023",
+    period: "2021 — 2023",
     role: "Software Engineer 1",
     title: "Smart-home and internet security features",
     summary:
@@ -81,7 +81,7 @@ export const experience = [
     number: "07",
     company: "Seceon Inc.",
     logo: "seceon.webp",
-    period: "May 2017 — Oct 2017",
+    period: "2017",
     role: "Research Intern",
     title: "Graph-based insider threat detection",
     summary:

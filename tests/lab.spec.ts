@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { articles } from "../src/lib/articles";
 
 test("/lab/ lists each registry entry and its link resolves to a built page", async ({
   page,
@@ -8,19 +9,16 @@ test("/lab/ lists each registry entry and its link resolves to a built page", as
   await page.goto("/lab/");
   await expect(page).toHaveTitle(/Lab — Suraj Jena/);
   const entries = page.locator(".article-entry");
-  await expect(entries).toHaveCount(1);
-  const first = entries.first();
-  await expect(first.getByRole("heading", { level: 2 })).toHaveText(
-    "Designing rewards for a small learning agent",
-  );
-  await expect(first.locator("time")).toHaveAttribute("datetime", "2026-10-18");
-  const href = await first
-    .locator(".article-title a")
-    .getAttribute("href");
-  expect(href).toBe("./reward-design/");
-  const response = await request.get("/lab/reward-design/");
-  expect(response.status()).toBe(200);
-  expect(await response.text()).toContain("Designing rewards");
+  await expect(entries).toHaveCount(articles.length);
+  for (const article of articles) {
+    const entry = entries.filter({ has: page.getByRole("heading", { name: article.title, exact: true }) });
+    await expect(entry).toHaveCount(1);
+    await expect(entry.locator("time")).toHaveAttribute("datetime", article.published);
+    await expect(entry.locator(".article-title a")).toHaveAttribute("href", `./${article.slug}/`);
+    const response = await request.get(`/lab/${article.slug}/`);
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toContain(article.title);
+  }
 });
 
 test("/lab/ navigation is depth-correct and keyboard-accessible", async ({

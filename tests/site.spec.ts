@@ -51,8 +51,8 @@ test('experience lists separate engineering roles and earlier work',async({page}
   }
   await expect(rows.filter({hasText:'Research Intern'})).toContainText('Seceon Inc.');
   await expect(rows.filter({hasText:'Software Developer Intern'})).toContainText('Persistent Systems');
-  await expect(rows.filter({hasText:'Software Engineer 2'})).toContainText('Aug 2023 — Mar 2025');
-  await expect(rows.filter({hasText:'Software Engineer 1'})).toContainText('Sep 2021 — Aug 2023');
+  await expect(rows.filter({hasText:'Software Engineer 2'})).toContainText('2023 — 2025');
+  await expect(rows.filter({hasText:'Software Engineer 1'})).toContainText('2021 — 2023');
   const research=rows.filter({hasText:'Research Intern'});await research.locator('summary').click();await expect(research).toContainText('Prasant Mohapatra');
 });
 

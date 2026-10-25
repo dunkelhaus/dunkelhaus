@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Vendored distill template is loaded first so its injected styles precede
+         this page's stylesheets in the cascade; the theme layer then overrides it. -->
+    <script src="../../vendor/template.v2.js"></script>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/article-theme.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score." />
+    <meta property="og:title" content="Rebuilding a cancer-classification experiment" />
+    <meta property="og:description" content="Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score." />
+    <link rel="icon" type="image/svg+xml" href="../../icon.svg" />
+    <title>Rebuilding a cancer-classification experiment — Suraj Jena</title>
+  </head>
+  <body>
+    <d-front-matter>
+      <script type="text/json">
+        {
+          "title": "Rebuilding a cancer-classification experiment",
+          "description": "Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score.",
+          "published": "Oct 25, 2026",
+          "authors": [
+            {
+              "author": "Suraj Jena",
+              "authorURL": "https://dunkelhaus.github.io/dunkelhaus/",
+              "affiliations": [{ "name": "Austin, TX" }]
+            }
+          ],
+          "katex": {
+            "delimiters": [
+              { "left": "$$", "right": "$$", "display": true },
+              { "left": "$", "right": "$", "display": false }
+            ]
+          }
+        }
+      </script>
+    </d-front-matter>
+
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="wordmark" href="../../" aria-label="Suraj Jena home"
+        ><span class="brand-symbol" aria-hidden="true"><i></i><i></i></span>
+        Suraj Jena<span class="wordmark-period">.</span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="../../#experience">Experience</a><a
+          href="../"
+          aria-current="page"
+          >Lab <span class="nav-dot" aria-hidden="true"></span></a
+        ><a href="../../#about">About</a>
+      </nav>
+      <a class="header-contact" href="mailto:jena.suraj.k@gmail.com"
+        >Contact
+        <svg
+          class="arrow-icon"
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          ><path
+            d="M5 19 19 5M5 5h14v14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round" /></svg
+      ></a>
+    </header>
+
+    <main id="main">
+      <d-title>
+        <h1>Rebuilding a cancer-classification experiment</h1>
+      </d-title>
+
+      <d-byline></d-byline>
+
+      <d-article>
+        <p class="l-text">
+          Five tumor-level classifiers got every final test case right. That is
+          the shortest account of this project, and the least useful one. The
+          test set contained only 22 tumors. Another input matrix contained
+          92.55% literal <code>NA</code> values whose biological meaning was not
+          verified. This is a walkthrough of rebuilding the experiments,
+          checking their numerical behavior, and separating what the results
+          show from what they cannot establish.
+        </p>
+
+        <h2 id="question">The question was classification, not treatment</h2>
+        <p>
+          The task was to distinguish lung adenocarcinoma from melanoma using
+          mutation-derived inputs. I compared eight pipelines: five mutation
+          representations, M1–M5, and three wide sample-matrix pipelines, S0–S2.
+          Melanoma was label 1 and the positive class. Lung adenocarcinoma was
+          label 0. Decisions used a fixed probability threshold of 0.5.
+        </p>
+        <p>
+          Mutation signatures provide the biological context. Substitution
+          patterns and neighboring bases can carry information about mutation
+          processes. The pmsignature work models those features with a compact
+          probabilistic representation; the usual joint representation has
+          96 immediate sequence contexts.<d-cite key="shiraishi2015"></d-cite>
+          This project did not reproduce that paper's signature-extraction
+          model. It rebuilt a local classification workflow with explicit,
+          proposed settings. It did not identify causal signatures or test
+          whether a patient would benefit from treatment.
+        </p>
+
+        <h2 id="code">A new experiment package, not a new portal</h2>
+        <p>
+          The old repository mixed training code, a REST application, browser
+          controls, and copied visualization demos. I added an isolated Python
+          package at <code>src/cancer_therapy/</code>, with a project-local
+          Python 3.12 environment and a locked dependency set. Keras 3 used the
+          PyTorch backend, configured before import. The new commands did not
+          import the legacy REST or TensorFlow application.
+        </p>
+        <p>
+          That separation does not make <code>modules/</code> disposable.
+          The old coordinator still imports its database, REST, statistics, and
+          neural-network components. The new package replaces the experiment
+          workflow, not the web portal. I left the legacy tree unchanged rather
+          than combine reproduction with an unrelated application migration.
+        </p>
+
+        <h2 id="audit">The source audit changed the interpretation</h2>
+        <p>
+          Preparation verified file hashes, byte sizes, headers, identifiers,
+          and dimensions before fitting. The mutation input needed recovery
+          from an existing Git blob. Recovery refused to overwrite a conflicting
+          destination. Parsing found one recorded malformed row: source line
+          584851, from <code>lungad_28</code>, had an all-zero first flank group.
+          Excluding that row left 3,520,402 mutations from 110 tumors. That tumor's
+          retained count was 63,861, including for its frequency denominator.
+        </p>
+        <p>
+          The sample input had the same set of tumor identifiers, but a very
+          different shape: 110 rows and 1,499,663 feature columns. Of its
+          164,962,930 cells, 152,670,675 were literal <code>NA</code> values.
+          The remaining 12,292,255 cells were numeric observations, including
+          observed zeros. The reader kept these cases distinct and retained
+          every feature position.
+        </p>
+        <blockquote>
+          <p>
+            Here, “92.55% missing” describes the file encoding and our chosen
+            interpretation. It does not establish that these cells are unknown
+            measurements rather than biological absence. If <code>NA</code>
+            means absence, imputing it as an unknown value can be the wrong
+            model of the data.
+          </p>
+        </blockquote>
+        <p>
+          This uncertainty should have been resolved before the expensive
+          sample experiments. It was not. Their results are therefore
+          conditional on treating <code>NA</code> as missing. Matching tumor
+          identifiers also do not prove that the two files encode identical
+          underlying mutation records. Neither issue is repaired by a high
+          classification score.
+        </p>
+
+        <h2 id="representations">Five ways to represent mutations</h2>
+        <p>
+          One retained mutation has 14 indicators: four for the upstream base,
+          six for substitution type, and four for the downstream base. Exactly
+          one indicator is active in each group. The substitution order is
+          C→A, C→G, C→T, T→A, T→C, T→G; the flank order is A, C, G, T.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Mutation representations" tabindex="0">
+          <table>
+            <caption>Mutation inputs. Identifiers and labels are not features.</caption>
+            <thead><tr><th scope="col">ID</th><th scope="col">Prediction unit</th><th scope="col">Input</th><th scope="col">Width</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">M1</th><td>One mutation row</td><td>Three indicator groups</td><td>14</td></tr>
+              <tr><th scope="row">M2</th><td>Tumor</td><td>Marginal indicator counts</td><td>14</td></tr>
+              <tr><th scope="row">M3</th><td>Tumor</td><td>Joint-context counts</td><td>96</td></tr>
+              <tr><th scope="row">M4</th><td>Tumor</td><td>M2 divided by that tumor's retained count</td><td>14</td></tr>
+              <tr><th scope="row">M5</th><td>Tumor</td><td>M3 divided by that tumor's retained count</td><td>96</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          M2 loses the association between an upstream base, substitution, and
+          downstream base. M3 keeps it in $4\times6\times4=96$ bins, ordered by
+          upstream base, then substitution, then downstream base. Checks matched
+          the joint histogram's marginals to M2 and its total to the tumor's
+          retained mutation count.
+        </p>
+        <p>
+          Frequency normalization removes the explicit count denominator, not
+          feature positions. M4 has three groups that each sum to one, so its
+          whole vector sums to three. M5's whole vector sums to one. Neither
+          representation appends mutation burden as another feature.
+        </p>
+
+        <h2 id="validation">Keep the unit of prediction and the fit boundary explicit</h2>
+        <p>
+          A seeded, shuffled, stratified 80/20 tumor split gave 88 development
+          tumors and 22 final test tumors. Development contained 34 lung
+          adenocarcinomas and 54 melanomas; final test contained 8 and 14.
+          M2–M5 and S0–S2 used the same saved assignments, matched by identifier
+          rather than input row order. Five stratified folds split the
+          development set. Each development tumor received exactly one
+          out-of-fold (OOF) prediction.
+        </p>
+        <p>
+          M1 instead split mutation rows: 2,816,321 development rows and 704,081
+          test rows. Row identities were disjoint, but tumors could recur across
+          partitions. Its question was whether one mutation row predicts a
+          label, not whether a model generalizes to a new tumor. Millions of
+          rows do not become millions of independent patients.
+        </p>
+        <p>
+          Each fold fitted its scaler, applicable imputer and MDS transform,
+          and a new classifier using only its training scope. Scaling kept
+          constant columns with a scale of one. Validation rows could control
+          neural early stopping, but the final test could not select settings,
+          imputation rank, transforms, or duration. This is the fit/transform
+          boundary needed to avoid preprocessing leakage.<d-cite key="sklearn-leakage"></d-cite>
+        </p>
+        <p>
+          Final refits used all 88 development tumors. Neural duration was the
+          rounded median of the five folds' best epochs, with no final-test
+          early stopping. All settings in this writeup are the settings run,
+          not a claim to have recovered undocumented historical defaults.
+        </p>
+
+        <h2 id="imputation">Fit the missing-data model inside each training scope</h2>
+        <p>
+          S0 and S1 used all 1,499,663 sample features after imputation and
+          scaling. S2 used the same completed, scaled matrix before MDS. There
+          was no top-feature subset or conversion to mutation proportions.
+        </p>
+        <p>
+          The imputer fixed each column's mean from observed training entries,
+          centered the matrix, and initialized missing centered entries to zero.
+          It then alternated a rank-$M$ decomposition with replacement of only
+          the missing entries. Observed values were restored exactly at every
+          update. The next decomposition used the updated matrix. A single SVD
+          followed by one fill would not implement this loop.
+        </p>
+        <d-math block tabindex="0">\hat{x}_{ij}=\mu_j+a_i^{\mathsf T}v_j</d-math>
+        <p>
+          In this expression, $\mu_j$ is the fixed training offset, $v_j$ is a
+          basis vector for feature $j$, and $a_i$ contains row coefficients.
+          The rank constraint applies to the reconstruction used for missing
+          values. Restoring observed entries means the completed matrix need
+          not itself have rank $M$.
+        </p>
+        <p>
+          Rank selection hid 10% of eligible observed training entries in three
+          seeded repeats. Candidates 1, 2, 5, 10, and 20 used the same masks.
+          Mask construction retained observed support for fitting. Mean hidden-entry
+          RMSE selected rank, with lower rank breaking a tie. The selected rank
+          was then refitted on the original observations. These entry holdouts
+          were separate from classifier validation: a good reconstruction score
+          does not establish a good cancer classifier.
+        </p>
+        <p>
+          A held-out tumor did not trigger another decomposition. Its own
+          observed entries fitted coefficients against the frozen training
+          offsets and basis, using a minimum-norm least-squares solution with
+          relative cutoff $10^{-6}$. Its missing entries were filled from those
+          coefficients. Its observed entries stayed unchanged. Processing one
+          held-out row could not change another row's result or the basis.
+        </p>
+        <p>
+          Unsupported data required explicit assumptions. A column with no
+          training observations used the global observed training mean and zero
+          basis loadings. A row without usable support used zero coefficients.
+          The final development fit had 73,033 never-observed columns. Those
+          fallbacks retained feature positions; they did not supply evidence
+          about the missing biological values. Negative reconstructions were
+          counted, not silently clipped.
+        </p>
+        <p>
+          Diagnostics tracked factor reconstruction RMSE on observed entries,
+          relative change in missing values, and stopping reason. Proposed
+          limits were relative change $10^{-4}$, insufficient relative RMSE
+          improvement $10^{-4}$ for five iterations, or a 100-iteration cap.
+          <strong>All six classifier-training scopes selected rank 5, but all
+          six refits stopped on a plateau, not convergence.</strong> Across 90
+          rank-selection fits, 44 stopped on plateau and 46 reached the cap.
+          Outputs were finite; finite is not the same as converged.
+        </p>
+
+        <h2 id="mds">Classical MDS needs an out-of-sample rule</h2>
+        <p>
+          S2 reduced the completed, standardized features to ten coordinates
+          using Euclidean classical multidimensional scaling. It formed squared
+          distances, double-centered them, and used a symmetric eigensolver.
+          For squared-distance matrix $D^{(2)}$ and centering matrix $H$:
+        </p>
+        <d-math block tabindex="0">B=-\tfrac12 H D^{(2)}H,\qquad Z=V\Lambda^{1/2}</d-math>
+        <p>
+          Components required positive supported eigenvalues. Materially
+          negative spectra and excessive dimension requests were errors, not
+          opportunities to take absolute eigenvalues. Row-Gram or feature-block
+          calculations avoided constructing a distance matrix for every feature.
+        </p>
+        <p>
+          A new row used squared distances to the frozen training reference.
+          Subtracting its mean distance and the saved training distance means
+          produced a centered vector, projected with the saved eigenvectors and
+          inverse square-root eigenvalues. No joint test embedding was fitted.
+          Training self-projection, reload equivalence, and agreement with PCA
+          scores up to sign or rotation checked this Euclidean implementation;
+          PCA did not replace the experiment.
+        </p>
+        <p>
+          The final ten components accounted for about 62.0% of the positive
+          spectrum. Coordinates were not standardized again. Neither that
+          percentage nor a visually separated embedding establishes predictive
+          performance. MDS preserves unsupervised geometry, not a label objective.
+        </p>
+
+        <h2 id="execution">Make GPU execution and progress observable</h2>
+        <p>
+          The seven neural experiments used hidden layers of 16 and 8 ReLU
+          units, a sigmoid output, binary cross-entropy, Adam at 0.001, and kernel
+          L2 coefficient 0.0001. Fold stopping monitored validation loss with
+          patience 10 and restored the best weights. M1 used batches of 4,096
+          for at most 50 epochs; the other neural models used batches of 16 for
+          at most 200. No model used class weights. S0 used L2 logistic regression
+          with $C=1$ and an unpenalized intercept.
+        </p>
+        <p>
+          An early execution problem exposed an important distinction: putting
+          the neural model on CUDA did not put NumPy imputation, MDS, or the CPU
+          logistic solver there. I added explicit GPU numerical paths rather
+          than describe a partly CPU pipeline as fully accelerated. The measured
+          runs used an RTX 2080 Ti. Imputation and MDS used float64 calculations;
+          neural inputs and weights used float32. The GPU logistic path used
+          L-BFGS for the same L2 objective, checked against the CPU implementation.
+          File reading, scaling, mask generation, and serialization remained on CPU.
+        </p>
+        <p>
+          GPU API behavior mattered for correctness. PyTorch's CUDA
+          <code>lstsq</code> driver assumes full rank, but held-out observed
+          subsets can be rank-deficient.<d-cite key="torch-lstsq"></d-cite>
+          The GPU row projection therefore used an SVD-based minimum-norm solve
+          with the specified cutoff instead of quietly changing that behavior.
+        </p>
+        <p>
+          Folds and rank candidates ran sequentially. Compatible S0–S2 scopes
+          reused preprocessing only when source hashes, feature order, exact
+          training identities and values, masks, seeds, settings, implementation,
+          and numerical device matched. Checksums protected completed cache
+          entries. Interrupted work remained separate; an unfinished fit was
+          not relabeled complete. Cache reuse also means recorded continuation
+          durations are not clean end-to-end speed benchmarks.
+        </p>
+        <p>
+          Flushed progress events exposed experiment, fold, rank candidate,
+          repeat, iteration, device, stopping diagnostics, and neural epochs or
+          logistic evaluations. Each run saved these events alongside its
+          configuration, source audit, vocabulary, splits, numerical state,
+          model, history, warnings, versions, code revision and dirty state,
+          and identity-linked probabilities. Reports could be regenerated from
+          saved probabilities without training or loading a model.
+        </p>
+
+        <h2 id="results">Read the results at the right level</h2>
+        <p>
+          The table below reports pooled OOF development results, not the mean
+          training score. Final test results are a separate evaluation after
+          refitting. AUROC uses probabilities; accuracy uses the fixed threshold.
+          In every confusion matrix below, rows are true labels and columns are
+          predictions, ordered as lung adenocarcinoma, then melanoma.
+          A majority-class prediction on the tumor test set would score
+          $14/22=63.64\%$ accuracy.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Tumor-level experiment results" tabindex="0">
+          <table>
+            <caption>Tumor-level runs: 88 OOF predictions and 22 final predictions per experiment.</caption>
+            <thead><tr><th scope="col">ID</th><th scope="col">OOF accuracy</th><th scope="col">OOF AUROC</th><th scope="col">Final accuracy</th><th scope="col">Final AUROC</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">M2</th><td>94.32%</td><td>0.9935</td><td>100% (22/22)</td><td>1.0000</td></tr>
+              <tr><th scope="row">M3</th><td>95.45%</td><td>0.9973</td><td>100% (22/22)</td><td>1.0000</td></tr>
+              <tr><th scope="row">M4</th><td>94.32%</td><td>0.9929</td><td>100% (22/22)</td><td>1.0000</td></tr>
+              <tr><th scope="row">M5</th><td>96.59%</td><td>0.9973</td><td>100% (22/22)</td><td>1.0000</td></tr>
+              <tr><th scope="row">S0</th><td>94.32%</td><td>0.9766</td><td>100% (22/22)</td><td>1.0000</td></tr>
+              <tr><th scope="row">S1</th><td>92.05%</td><td>0.9472</td><td>63.64% (14/22)</td><td>0.7188</td></tr>
+              <tr><th scope="row">S2</th><td>54.55%</td><td>0.6468</td><td>59.09% (13/22)</td><td>0.6295</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          M1 belongs outside that ranking. Its row-level OOF accuracy was
+          69.42% with AUROC 0.7285; its final accuracy was 69.37% with AUROC
+          0.7281. On final rows, lung adenocarcinoma recall was only 33.20%,
+          compared with melanoma recall of 88.92%. Overall accuracy hid that
+          large class imbalance in errors.
+        </p>
+        <d-figure data-figure="cancer-results">
+          <div class="figure-body" data-figure-body></div>
+          <figcaption>
+            <b>Figure 1:</b> Inspect saved real-data confusion counts and class
+            metrics. Switch between pooled OOF development and final test, and
+            between experiments. M1 has mutation-row units; the others have
+            tumor units. Loading the aggregate measurements does not run training.
+          </figcaption>
+        </d-figure>
+        <p>
+          <a href="../../articles/cancer-classification-results.json" download>Download the aggregate confusion counts, AUROC values, and source audit</a>.
+          This snapshot contains no individual tumor records. Precision, recall,
+          support, and accuracy can be recomputed from its counts; AUROC is a
+          saved probability-based measurement and cannot be recovered from a
+          thresholded confusion matrix alone.
+        </p>
+
+        <h2 id="class-metrics">What the class metrics add</h2>
+        <p>
+          M2 and M4 each made five OOF errors, but not the same class tradeoff.
+          M2's confusion counts were 31 correct and 3 missed lung tumors,
+          with 2 missed and 52 correct melanomas. M4 had 32 correct and 2 missed
+          lung tumors, with 3 missed and 51 correct melanomas.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Mutation model class metrics" tabindex="0">
+          <table>
+            <caption>Pooled OOF class metrics: lung support 34, melanoma support 54.</caption>
+            <thead><tr><th scope="col">ID</th><th scope="col">Lung precision</th><th scope="col">Lung recall</th><th scope="col">Melanoma precision</th><th scope="col">Melanoma recall</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">M2</th><td>93.94%</td><td>91.18%</td><td>94.55%</td><td>96.30%</td></tr>
+              <tr><th scope="row">M3</th><td>94.12%</td><td>94.12%</td><td>96.30%</td><td>96.30%</td></tr>
+              <tr><th scope="row">M4</th><td>91.43%</td><td>94.12%</td><td>96.23%</td><td>94.44%</td></tr>
+              <tr><th scope="row">M5</th><td>91.89%</td><td>100%</td><td>100%</td><td>94.44%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          M5 made three OOF errors, all melanomas predicted as lung cancer.
+          Its perfect lung recall and perfect melanoma precision are linked
+          consequences of having no lung tumors predicted as melanoma, not two
+          independent achievements. The apparent differences among M2–M5 are
+          only one or two development errors. One split and 88 tumors do not
+          establish a reliable winner.
+        </p>
+        <p>
+          On the final 22 tumors, M2–M5 and S0 all had confusion matrix
+          <code>[[8, 0], [0, 14]]</code>.
+          Both classes therefore had precision and recall of one on this test
+          set. That is a valid description of these counts, not a claim of
+          perfect population performance. Patient-level independence was not
+          verified, and no external cohort was evaluated.
+        </p>
+
+        <h2 id="interpretation">Plausible explanations are not demonstrated causes</h2>
+        <p>
+          Aggregation gives a tumor classifier many mutations rather than one
+          noisy local observation. Counts preserve burden and composition;
+          frequencies emphasize composition. The strong M4 and M5 results show
+          that an explicit burden feature was not necessary for this split.
+          They do not identify the biological mechanism or exclude technical
+          and cohort confounding.
+        </p>
+        <p>
+          Tobacco-associated and ultraviolet-associated mutation processes make
+          the lung/melanoma distinction biologically plausible.<d-cite key="alexandrov2020"></d-cite>
+          These classifiers did not estimate signature exposures or establish
+          which signatures caused their decisions. Prediction and signature
+          attribution are different analyses.
+        </p>
+        <p>
+          The sample results also resist a simple “wide data failed” story.
+          S0 matched the perfect final mutation-model scores. S1 did not: its
+          roughly 24 million neural parameters faced only 88 final-fit tumors,
+          and its final accuracy fell to 14/22. That equals the majority baseline
+          numerically, but its predictions were not all melanoma: its confusion
+          matrix was <code>[[7, 1], [7, 7]]</code>.
+          Parameter count and overfitting are plausible concerns, not a measured
+          causal explanation for the failure.
+        </p>
+        <p>
+          S2 scored 13/22, with confusion matrix
+          <code>[[7, 1], [8, 6]]</code>.
+          Losing label information through an unsupervised reduction is one
+          hypothesis. Coordinate scale and downstream optimization are others.
+          We did not isolate them. Its 62% spectrum figure is not evidence that
+          it retained 62% of the information needed to classify cancer.
+        </p>
+        <p>
+          All three sample pipelines share the unresolved <code>NA</code>
+          interpretation and nonconverged imputation diagnostics. Even a correct
+          implementation cannot turn an unverified input assumption into a
+          biological fact.
+        </p>
+
+        <h2 id="reproduction">What is reproducible, and what remains open</h2>
+        <p>
+          The completed local suite passed 281 tests, including actual GPU
+          tests. Checks covered source parsing and the single exclusion,
+          representation totals, split identity, held-out independence,
+          decomposition agreement, rank-deficient projection, MDS self-projection,
+          CPU/GPU objective agreement, model reload, and end-to-end fixture runs.
+          All eight real-data bundles completed separately. Final audits checked
+          unchanged source hashes, matching tumor manifests, full model widths,
+          and the six shared sample preprocessing scopes. Warnings remained
+          recorded; a passing suite was not treated as proof of data validity.
+        </p>
+        <p>
+          In the experiment project, preparation and fitting are separate
+          commands. A fresh output path is required. Synthetic fixture mode
+          checks the software and never counts as a real-data result:
+        </p>
+        <pre class="table-scroll" tabindex="0" aria-label="Local experiment commands"><code class="language-bash">uv sync --locked
+uv run python -m cancer_therapy prepare
+uv run python -m cancer_therapy run M1 M2 M3 M4 M5 S0 S1 S2 --fixture --device cpu --output results/new-fixture
+uv run python -m cancer_therapy run M1 M2 M3 M4 M5 S0 S1 S2 --device cuda --output results/new-full-data</code></pre>
+        <p>
+          The downloadable snapshot supports inspection of the reported
+          aggregate results. It is not a distribution of the source matrices,
+          trained weights, or the complete local artifact bundles. Those
+          bundles also preserve fold summaries, PR and ROC curves, numerical
+          histories, and identity-linked probabilities.
+        </p>
+        <p>
+          The next scientific step is to verify how the sample matrix was
+          generated and what <code>NA</code> means. After that come checks for
+          patient and cohort dependence, independent validation, and targeted
+          tests of the competing explanations for S1 and S2. Changing those
+          assumptions or tuning after seeing this final test would create a new
+          experiment, not improve the evidence for this one.
+        </p>
+        <p>
+          The useful outcome is not just a table of eight scores. It is a
+          workflow that makes prediction units, fit boundaries, device behavior,
+          stopping conditions, and unsupported assumptions visible. A perfect
+          test score is worth reporting. So is the reason not to trust it too far.
+        </p>
+      </d-article>
+
+      <d-bibliography>
+        <script type="text/bibtex">
+          @article{shiraishi2015,
+            author = {Shiraishi, Yuichi and Tremmel, Georg and Miyano, Satoru and Stephens, Matthew},
+            title = {A Simple Model-Based Approach to Inferring and Visualizing Cancer Mutation Signatures},
+            journal = {PLOS Genetics},
+            year = {2015},
+            volume = {11},
+            number = {12},
+            pages = {e1005657},
+            doi = {10.1371/journal.pgen.1005657},
+            url = {https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1005657},
+          }
+          @article{alexandrov2020,
+            author = {Alexandrov, Ludmil B. and Kim, Jaegil and Haradhvala, Nicholas J. and others},
+            title = {The repertoire of mutational signatures in human cancer},
+            journal = {Nature},
+            volume = {578},
+            pages = {94--101},
+            year = {2020},
+            doi = {10.1038/s41586-020-1943-3},
+            url = {https://www.nature.com/articles/s41586-020-1943-3},
+          }
+          @misc{sklearn-leakage,
+            author = {scikit-learn},
+            title = {Common pitfalls and recommended practices: data leakage},
+            year = {2026},
+            url = {https://scikit-learn.org/stable/common_pitfalls.html#data-leakage},
+          }
+          @misc{torch-lstsq,
+            author = {PyTorch},
+            title = {torch.linalg.lstsq: PyTorch 2.14 documentation},
+            year = {2026},
+            url = {https://docs.pytorch.org/docs/stable/generated/torch.linalg.lstsq.html},
+          }
+        </script>
+      </d-bibliography>
+    </main>
+
+    <d-appendix></d-appendix>
+
+    <noscript>
+      This article needs JavaScript for its math typesetting and interactive
+      figures. Contact Suraj at jena.suraj.k@gmail.com or visit
+      <a href="https://github.com/dunkelhaus">GitHub</a>.
+    </noscript>
+
+    <script type="module" src="/src/articles/main.ts"></script>
+  </body>
+</html>

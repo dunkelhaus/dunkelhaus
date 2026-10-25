@@ -9,6 +9,13 @@ export interface Article {
 
 export const articles: readonly Article[] = [
   {
+    slug: "cancer-classification",
+    title: "Rebuilding a cancer-classification experiment",
+    published: "2026-10-25",
+    description:
+      "Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score.",
+  },
+  {
     slug: "reward-design",
     title: "Designing rewards for a small learning agent",
     published: "2026-10-18",
