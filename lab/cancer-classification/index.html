@@ -9,9 +9,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score." />
+    <meta name="description" content="Eight cancer classifiers explained through representations, validation boundaries, measured curves, and unresolved data assumptions." />
     <meta property="og:title" content="Rebuilding a cancer-classification experiment" />
-    <meta property="og:description" content="Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score." />
+    <meta property="og:description" content="Eight cancer classifiers explained through representations, validation boundaries, measured curves, and unresolved data assumptions." />
     <link rel="icon" type="image/svg+xml" href="../../icon.svg" />
     <title>Rebuilding a cancer-classification experiment — Suraj Jena</title>
   </head>
@@ -20,7 +20,7 @@
       <script type="text/json">
         {
           "title": "Rebuilding a cancer-classification experiment",
-          "description": "Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score.",
+           "description": "Eight cancer classifiers explained through representations, validation boundaries, measured curves, and unresolved data assumptions.",
           "published": "Oct 25, 2026",
           "authors": [
             {
@@ -79,457 +79,622 @@
 
       <d-article>
         <p class="l-text">
-          Five tumor-level classifiers got every final test case right. That is
-          the shortest account of this project, and the least useful one. The
-          test set contained only 22 tumors. Another input matrix contained
-          92.55% literal <code>NA</code> values whose biological meaning was not
-          verified. This is a walkthrough of rebuilding the experiments,
-          checking their numerical behavior, and separating what the results
-          show from what they cannot establish.
+          How much information about a cancer label survives a change in the way
+          mutations are represented? I tested eight pipelines that distinguish
+          lung adenocarcinoma from melanoma: a single mutation, tumor-level counts
+          and frequencies, and a wide sample matrix with and without dimensionality
+          reduction. Five pipelines classified all 22 final test tumors correctly.
+          That result needs two qualifications from the start: the cohort is small,
+          and the wide matrix has an unresolved missing-data interpretation.
+        </p>
+        <p>
+          This article follows the evidence from representation to evaluation.
+          Each experiment has its own setup, training record, class metrics,
+          probability-based curves, confusion matrices, and cross-validation plots.
+          The purpose is not to declare a winning cancer detector. It is to explain
+          what each comparison tests, what was measured, and where the evidence stops.
         </p>
 
-        <h2 id="question">The question was classification, not treatment</h2>
-        <p>
-          The task was to distinguish lung adenocarcinoma from melanoma using
-          mutation-derived inputs. I compared eight pipelines: five mutation
-          representations, M1–M5, and three wide sample-matrix pipelines, S0–S2.
-          Melanoma was label 1 and the positive class. Lung adenocarcinoma was
-          label 0. Decisions used a fixed probability threshold of 0.5.
-        </p>
-        <p>
-          Mutation signatures provide the biological context. Substitution
-          patterns and neighboring bases can carry information about mutation
-          processes. The pmsignature work models those features with a compact
-          probabilistic representation; the usual joint representation has
-          96 immediate sequence contexts.<d-cite key="shiraishi2015"></d-cite>
-          This project did not reproduce that paper's signature-extraction
-          model. It rebuilt a local classification workflow with explicit,
-          proposed settings. It did not identify causal signatures or test
-          whether a patient would benefit from treatment.
-        </p>
+        <nav aria-label="Article contents">
+          <h2 id="contents">Contents</h2>
+          <ol>
+            <li><a href="#study">Study questions and data</a></li>
+            <li><a href="#representations">From one mutation to a tumor representation</a></li>
+            <li><a href="#evaluation">Evaluation protocol and how to read the figures</a></li>
+            <li><a href="#overview">Results at a glance</a></li>
+            <li><a href="#experiment-M1">M1: one mutation, one prediction</a></li>
+            <li><a href="#experiment-M2">M2: marginal counts</a></li>
+            <li><a href="#experiment-M3">M3: joint-context counts</a></li>
+            <li><a href="#experiment-M4">M4: marginal frequencies</a></li>
+            <li><a href="#experiment-M5">M5: joint-context frequencies</a></li>
+            <li><a href="#imputation">The shared missing-data model</a></li>
+            <li><a href="#experiment-S0">S0: full-width logistic regression</a></li>
+            <li><a href="#experiment-S1">S1: full-width neural classification</a></li>
+            <li><a href="#experiment-S2">S2: ten-dimensional MDS</a></li>
+            <li><a href="#discussion">What the comparisons do—and do not—establish</a></li>
+            <li><a href="#audit">Numerical audit and published evidence</a></li>
+          </ol>
+        </nav>
 
-        <h2 id="code">A new experiment package, not a new portal</h2>
+        <h2 id="study">Study questions and data</h2>
         <p>
-          The old repository mixed training code, a REST application, browser
-          controls, and copied visualization demos. I added an isolated Python
-          package at <code>src/cancer_therapy/</code>, with a project-local
-          Python 3.12 environment and a locked dependency set. Keras 3 used the
-          PyTorch backend, configured before import. The new commands did not
-          import the legacy REST or TensorFlow application.
+          A mutation records a substitution and its local sequence context.
+          Mutational processes can leave different distributions over these features.
+          This is the biological motivation for the experiment, not a finding of the
+          classifiers. The pmsignature model uses a compact probabilistic account of
+          mutation features to infer signatures.<d-cite key="shiraishi2015"></d-cite>
+          Here the task is different: supervised prediction of the supplied cancer
+          label. These runs neither reproduce signature extraction nor identify which
+          signatures drive a decision. They do not evaluate treatment benefit.
         </p>
-        <p>
-          That separation does not make <code>modules/</code> disposable.
-          The old coordinator still imports its database, REST, statistics, and
-          neural-network components. The new package replaces the experiment
-          workflow, not the web portal. I left the legacy tree unchanged rather
-          than combine reproduction with an unrelated application migration.
-        </p>
-
-        <h2 id="audit">The source audit changed the interpretation</h2>
-        <p>
-          Preparation verified file hashes, byte sizes, headers, identifiers,
-          and dimensions before fitting. The mutation input needed recovery
-          from an existing Git blob. Recovery refused to overwrite a conflicting
-          destination. Parsing found one recorded malformed row: source line
-          584851, from <code>lungad_28</code>, had an all-zero first flank group.
-          Excluding that row left 3,520,402 mutations from 110 tumors. That tumor's
-          retained count was 63,861, including for its frequency denominator.
-        </p>
-        <p>
-          The sample input had the same set of tumor identifiers, but a very
-          different shape: 110 rows and 1,499,663 feature columns. Of its
-          164,962,930 cells, 152,670,675 were literal <code>NA</code> values.
-          The remaining 12,292,255 cells were numeric observations, including
-          observed zeros. The reader kept these cases distinct and retained
-          every feature position.
-        </p>
-        <blockquote>
-          <p>
-            Here, “92.55% missing” describes the file encoding and our chosen
-            interpretation. It does not establish that these cells are unknown
-            measurements rather than biological absence. If <code>NA</code>
-            means absence, imputing it as an unknown value can be the wrong
-            model of the data.
-          </p>
-        </blockquote>
-        <p>
-          This uncertainty should have been resolved before the expensive
-          sample experiments. It was not. Their results are therefore
-          conditional on treating <code>NA</code> as missing. Matching tumor
-          identifiers also do not prove that the two files encode identical
-          underlying mutation records. Neither issue is repaired by a high
-          classification score.
-        </p>
-
-        <h2 id="representations">Five ways to represent mutations</h2>
-        <p>
-          One retained mutation has 14 indicators: four for the upstream base,
-          six for substitution type, and four for the downstream base. Exactly
-          one indicator is active in each group. The substitution order is
-          C→A, C→G, C→T, T→A, T→C, T→G; the flank order is A, C, G, T.
-        </p>
-        <div class="table-scroll" role="region" aria-label="Mutation representations" tabindex="0">
+        <div class="table-scroll" role="region" aria-label="Source data audit" tabindex="0">
           <table>
-            <caption>Mutation inputs. Identifiers and labels are not features.</caption>
-            <thead><tr><th scope="col">ID</th><th scope="col">Prediction unit</th><th scope="col">Input</th><th scope="col">Width</th></tr></thead>
+            <caption>Two source files, with the same set of tumor identifiers but different input units.</caption>
+            <thead><tr><th scope="col">Source</th><th scope="col">Rows</th><th scope="col">Features</th><th scope="col">Audit finding</th></tr></thead>
             <tbody>
-              <tr><th scope="row">M1</th><td>One mutation row</td><td>Three indicator groups</td><td>14</td></tr>
-              <tr><th scope="row">M2</th><td>Tumor</td><td>Marginal indicator counts</td><td>14</td></tr>
-              <tr><th scope="row">M3</th><td>Tumor</td><td>Joint-context counts</td><td>96</td></tr>
-              <tr><th scope="row">M4</th><td>Tumor</td><td>M2 divided by that tumor's retained count</td><td>14</td></tr>
-              <tr><th scope="row">M5</th><td>Tumor</td><td>M3 divided by that tumor's retained count</td><td>96</td></tr>
+              <tr><th scope="row">Mutation rows</th><td>3,520,402 retained</td><td>14 indicators</td><td>110 tumors; one recorded malformed row excluded</td></tr>
+              <tr><th scope="row">Sample matrix</th><td>110 tumors</td><td>1,499,663</td><td>Every feature position retained; no feature selection</td></tr>
+              <tr><th scope="row">Sample numeric cells</th><td>12,292,255 cells</td><td>7.45% of the matrix</td><td>Observed zeros remain observations</td></tr>
+              <tr><th scope="row">Sample literal <code>NA</code> cells</th><td>152,670,675 cells</td><td>92.55% of the matrix</td><td>Treated as unknown values; biological meaning unverified</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote><p>
+          The sample results are conditional on treating <code>NA</code> as missing.
+          If it means biological absence rather than an unmeasured value, imputation
+          can be the wrong data model. This provenance question remains unresolved.
+          Numerical correctness and high classification scores cannot settle it.
+        </p></blockquote>
+        <p>
+          File hashes, headers, widths, and identities were checked before fitting.
+          Mutation source line 584851, from <code>lungad_28</code>, had an all-zero
+          upstream indicator group. Its exclusion leaves that tumor with 63,861
+          retained rows; frequency denominators use this adjusted count. No other
+          one-hot violation is accepted. Matching identifiers do not establish that
+          the two files encode identical underlying mutation records.
+        </p>
+
+        <h2 id="representations">From one mutation to a tumor representation</h2>
+        <p>
+          Let $t$ index a tumor and $r$ index one of its $n_t$ retained mutations.
+          Write $b_{tr}$ for the upstream base, $s_{tr}$ for substitution type, and
+          $c_{tr}$ for the downstream base. The base alphabet is A, C, G, T;
+          substitution order is C→A, C→G, C→T, T→A, T→C, T→G.
+          The indicator $\mathbf{1}\{E\}$ below means
+          one if event $E$ is true and zero otherwise.
+        </p>
+        <d-math block tabindex="0">x_{tr}=[\mathrm{onehot}_4(b_{tr}),\mathrm{onehot}_6(s_{tr}),\mathrm{onehot}_4(c_{tr})]\in\{0,1\}^{14}</d-math>
+        <p>
+          M1 uses that row directly. M2 sums each indicator over a tumor, keeping
+          the three marginal distributions. M3 instead counts each complete
+          upstream–substitution–downstream combination. The difference is not just
+          width: marginal counts lose the association among the three features.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Worked representation example" tabindex="0">
+          <table>
+            <caption>Illustration only—not measured data. Four mutations: A[C→A]T twice, A[C→T]G once, G[T→G]T once. Unlisted bins are zero.</caption>
+            <thead><tr><th scope="col">Representation</th><th scope="col">Nonzero counts</th><th scope="col">After division by four mutations</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Upstream marginal</th><td>A: 3; G: 1</td><td>A: 0.75; G: 0.25</td></tr>
+              <tr><th scope="row">Substitution marginal</th><td>C→A: 2; C→T: 1; T→G: 1</td><td>0.50; 0.25; 0.25</td></tr>
+              <tr><th scope="row">Downstream marginal</th><td>T: 3; G: 1</td><td>T: 0.75; G: 0.25</td></tr>
+              <tr><th scope="row">Joint contexts</th><td>A[C→A]T: 2; A[C→T]G: 1; G[T→G]T: 1</td><td>0.50; 0.25; 0.25</td></tr>
             </tbody>
           </table>
         </div>
         <p>
-          M2 loses the association between an upstream base, substitution, and
-          downstream base. M3 keeps it in $4\times6\times4=96$ bins, ordered by
-          upstream base, then substitution, then downstream base. Checks matched
-          the joint histogram's marginals to M2 and its total to the tumor's
-          retained mutation count.
+          The first three count rows form M2; their normalized values form M4.
+          The last row occupies three of M3's $4\times6\times4=96$ joint bins;
+          its normalized values form M5. M4 has three groups each summing to one,
+          so its vector sums to three. M5 has one joint distribution summing to one.
+          Neither normalized input appends mutation burden as another feature.
         </p>
-        <p>
-          Frequency normalization removes the explicit count denominator, not
-          feature positions. M4 has three groups that each sum to one, so its
-          whole vector sums to three. M5's whole vector sums to one. Neither
-          representation appends mutation burden as another feature.
-        </p>
-
-        <h2 id="validation">Keep the unit of prediction and the fit boundary explicit</h2>
-        <p>
-          A seeded, shuffled, stratified 80/20 tumor split gave 88 development
-          tumors and 22 final test tumors. Development contained 34 lung
-          adenocarcinomas and 54 melanomas; final test contained 8 and 14.
-          M2–M5 and S0–S2 used the same saved assignments, matched by identifier
-          rather than input row order. Five stratified folds split the
-          development set. Each development tumor received exactly one
-          out-of-fold (OOF) prediction.
-        </p>
-        <p>
-          M1 instead split mutation rows: 2,816,321 development rows and 704,081
-          test rows. Row identities were disjoint, but tumors could recur across
-          partitions. Its question was whether one mutation row predicts a
-          label, not whether a model generalizes to a new tumor. Millions of
-          rows do not become millions of independent patients.
-        </p>
-        <p>
-          Each fold fitted its scaler, applicable imputer and MDS transform,
-          and a new classifier using only its training scope. Scaling kept
-          constant columns with a scale of one. Validation rows could control
-          neural early stopping, but the final test could not select settings,
-          imputation rank, transforms, or duration. This is the fit/transform
-          boundary needed to avoid preprocessing leakage.<d-cite key="sklearn-leakage"></d-cite>
-        </p>
-        <p>
-          Final refits used all 88 development tumors. Neural duration was the
-          rounded median of the five folds' best epochs, with no final-test
-          early stopping. All settings in this writeup are the settings run,
-          not a claim to have recovered undocumented historical defaults.
-        </p>
-
-        <h2 id="imputation">Fit the missing-data model inside each training scope</h2>
-        <p>
-          S0 and S1 used all 1,499,663 sample features after imputation and
-          scaling. S2 used the same completed, scaled matrix before MDS. There
-          was no top-feature subset or conversion to mutation proportions.
-        </p>
-        <p>
-          The imputer fixed each column's mean from observed training entries,
-          centered the matrix, and initialized missing centered entries to zero.
-          It then alternated a rank-$M$ decomposition with replacement of only
-          the missing entries. Observed values were restored exactly at every
-          update. The next decomposition used the updated matrix. A single SVD
-          followed by one fill would not implement this loop.
-        </p>
-        <d-math block tabindex="0">\hat{x}_{ij}=\mu_j+a_i^{\mathsf T}v_j</d-math>
-        <p>
-          In this expression, $\mu_j$ is the fixed training offset, $v_j$ is a
-          basis vector for feature $j$, and $a_i$ contains row coefficients.
-          The rank constraint applies to the reconstruction used for missing
-          values. Restoring observed entries means the completed matrix need
-          not itself have rank $M$.
-        </p>
-        <p>
-          Rank selection hid 10% of eligible observed training entries in three
-          seeded repeats. Candidates 1, 2, 5, 10, and 20 used the same masks.
-          Mask construction retained observed support for fitting. Mean hidden-entry
-          RMSE selected rank, with lower rank breaking a tie. The selected rank
-          was then refitted on the original observations. These entry holdouts
-          were separate from classifier validation: a good reconstruction score
-          does not establish a good cancer classifier.
-        </p>
-        <p>
-          A held-out tumor did not trigger another decomposition. Its own
-          observed entries fitted coefficients against the frozen training
-          offsets and basis, using a minimum-norm least-squares solution with
-          relative cutoff $10^{-6}$. Its missing entries were filled from those
-          coefficients. Its observed entries stayed unchanged. Processing one
-          held-out row could not change another row's result or the basis.
-        </p>
-        <p>
-          Unsupported data required explicit assumptions. A column with no
-          training observations used the global observed training mean and zero
-          basis loadings. A row without usable support used zero coefficients.
-          The final development fit had 73,033 never-observed columns. Those
-          fallbacks retained feature positions; they did not supply evidence
-          about the missing biological values. Negative reconstructions were
-          counted, not silently clipped.
-        </p>
-        <p>
-          Diagnostics tracked factor reconstruction RMSE on observed entries,
-          relative change in missing values, and stopping reason. Proposed
-          limits were relative change $10^{-4}$, insufficient relative RMSE
-          improvement $10^{-4}$ for five iterations, or a 100-iteration cap.
-          <strong>All six classifier-training scopes selected rank 5, but all
-          six refits stopped on a plateau, not convergence.</strong> Across 90
-          rank-selection fits, 44 stopped on plateau and 46 reached the cap.
-          Outputs were finite; finite is not the same as converged.
-        </p>
-
-        <h2 id="mds">Classical MDS needs an out-of-sample rule</h2>
-        <p>
-          S2 reduced the completed, standardized features to ten coordinates
-          using Euclidean classical multidimensional scaling. It formed squared
-          distances, double-centered them, and used a symmetric eigensolver.
-          For squared-distance matrix $D^{(2)}$ and centering matrix $H$:
-        </p>
-        <d-math block tabindex="0">B=-\tfrac12 H D^{(2)}H,\qquad Z=V\Lambda^{1/2}</d-math>
-        <p>
-          Components required positive supported eigenvalues. Materially
-          negative spectra and excessive dimension requests were errors, not
-          opportunities to take absolute eigenvalues. Row-Gram or feature-block
-          calculations avoided constructing a distance matrix for every feature.
-        </p>
-        <p>
-          A new row used squared distances to the frozen training reference.
-          Subtracting its mean distance and the saved training distance means
-          produced a centered vector, projected with the saved eigenvectors and
-          inverse square-root eigenvalues. No joint test embedding was fitted.
-          Training self-projection, reload equivalence, and agreement with PCA
-          scores up to sign or rotation checked this Euclidean implementation;
-          PCA did not replace the experiment.
-        </p>
-        <p>
-          The final ten components accounted for about 62.0% of the positive
-          spectrum. Coordinates were not standardized again. Neither that
-          percentage nor a visually separated embedding establishes predictive
-          performance. MDS preserves unsupervised geometry, not a label objective.
-        </p>
-
-        <h2 id="execution">Make GPU execution and progress observable</h2>
-        <p>
-          The seven neural experiments used hidden layers of 16 and 8 ReLU
-          units, a sigmoid output, binary cross-entropy, Adam at 0.001, and kernel
-          L2 coefficient 0.0001. Fold stopping monitored validation loss with
-          patience 10 and restored the best weights. M1 used batches of 4,096
-          for at most 50 epochs; the other neural models used batches of 16 for
-          at most 200. No model used class weights. S0 used L2 logistic regression
-          with $C=1$ and an unpenalized intercept.
-        </p>
-        <p>
-          An early execution problem exposed an important distinction: putting
-          the neural model on CUDA did not put NumPy imputation, MDS, or the CPU
-          logistic solver there. I added explicit GPU numerical paths rather
-          than describe a partly CPU pipeline as fully accelerated. The measured
-          runs used an RTX 2080 Ti. Imputation and MDS used float64 calculations;
-          neural inputs and weights used float32. The GPU logistic path used
-          L-BFGS for the same L2 objective, checked against the CPU implementation.
-          File reading, scaling, mask generation, and serialization remained on CPU.
-        </p>
-        <p>
-          GPU API behavior mattered for correctness. PyTorch's CUDA
-          <code>lstsq</code> driver assumes full rank, but held-out observed
-          subsets can be rank-deficient.<d-cite key="torch-lstsq"></d-cite>
-          The GPU row projection therefore used an SVD-based minimum-norm solve
-          with the specified cutoff instead of quietly changing that behavior.
-        </p>
-        <p>
-          Folds and rank candidates ran sequentially. Compatible S0–S2 scopes
-          reused preprocessing only when source hashes, feature order, exact
-          training identities and values, masks, seeds, settings, implementation,
-          and numerical device matched. Checksums protected completed cache
-          entries. Interrupted work remained separate; an unfinished fit was
-          not relabeled complete. Cache reuse also means recorded continuation
-          durations are not clean end-to-end speed benchmarks.
-        </p>
-        <p>
-          Flushed progress events exposed experiment, fold, rank candidate,
-          repeat, iteration, device, stopping diagnostics, and neural epochs or
-          logistic evaluations. Each run saved these events alongside its
-          configuration, source audit, vocabulary, splits, numerical state,
-          model, history, warnings, versions, code revision and dirty state,
-          and identity-linked probabilities. Reports could be regenerated from
-          saved probabilities without training or loading a model.
-        </p>
-
-        <h2 id="results">Read the results at the right level</h2>
-        <p>
-          The table below reports pooled OOF development results, not the mean
-          training score. Final test results are a separate evaluation after
-          refitting. AUROC uses probabilities; accuracy uses the fixed threshold.
-          In every confusion matrix below, rows are true labels and columns are
-          predictions, ordered as lung adenocarcinoma, then melanoma.
-          A majority-class prediction on the tumor test set would score
-          $14/22=63.64\%$ accuracy.
-        </p>
-        <div class="table-scroll" role="region" aria-label="Tumor-level experiment results" tabindex="0">
+        <div class="table-scroll" role="region" aria-label="Experiment map" tabindex="0">
           <table>
-            <caption>Tumor-level runs: 88 OOF predictions and 22 final predictions per experiment.</caption>
-            <thead><tr><th scope="col">ID</th><th scope="col">OOF accuracy</th><th scope="col">OOF AUROC</th><th scope="col">Final accuracy</th><th scope="col">Final AUROC</th></tr></thead>
+            <caption>Eight experiments. Preprocessing is fitted within each classifier-training scope.</caption>
+            <thead><tr><th scope="col">Run</th><th scope="col">Prediction unit</th><th scope="col">Representation</th><th scope="col">Classifier width</th><th scope="col">Classifier</th></tr></thead>
             <tbody>
-              <tr><th scope="row">M2</th><td>94.32%</td><td>0.9935</td><td>100% (22/22)</td><td>1.0000</td></tr>
-              <tr><th scope="row">M3</th><td>95.45%</td><td>0.9973</td><td>100% (22/22)</td><td>1.0000</td></tr>
-              <tr><th scope="row">M4</th><td>94.32%</td><td>0.9929</td><td>100% (22/22)</td><td>1.0000</td></tr>
-              <tr><th scope="row">M5</th><td>96.59%</td><td>0.9973</td><td>100% (22/22)</td><td>1.0000</td></tr>
-              <tr><th scope="row">S0</th><td>94.32%</td><td>0.9766</td><td>100% (22/22)</td><td>1.0000</td></tr>
-              <tr><th scope="row">S1</th><td>92.05%</td><td>0.9472</td><td>63.64% (14/22)</td><td>0.7188</td></tr>
-              <tr><th scope="row">S2</th><td>54.55%</td><td>0.6468</td><td>59.09% (13/22)</td><td>0.6295</td></tr>
+              <tr><th scope="row">M1</th><td>Mutation row</td><td>Three one-hot groups</td><td>14</td><td>Neural</td></tr>
+              <tr><th scope="row">M2</th><td>Tumor</td><td>Marginal counts</td><td>14</td><td>Neural</td></tr>
+              <tr><th scope="row">M3</th><td>Tumor</td><td>Joint-context counts</td><td>96</td><td>Neural</td></tr>
+              <tr><th scope="row">M4</th><td>Tumor</td><td>Marginal frequencies</td><td>14</td><td>Neural</td></tr>
+              <tr><th scope="row">M5</th><td>Tumor</td><td>Joint-context frequencies</td><td>96</td><td>Neural</td></tr>
+              <tr><th scope="row">S0</th><td>Tumor</td><td>Full sample matrix, imputed and scaled</td><td>1,499,663</td><td>L2 logistic</td></tr>
+              <tr><th scope="row">S1</th><td>Tumor</td><td>Same as S0</td><td>1,499,663</td><td>Neural</td></tr>
+              <tr><th scope="row">S2</th><td>Tumor</td><td>Same as S0, then classical MDS</td><td>10</td><td>Neural</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="evaluation">Evaluation protocol and how to read the figures</h2>
+        <p>
+          Seven experiments share a seeded, shuffled, stratified tumor split.
+          The development set supplies five folds; the final set is reserved for
+          one evaluation after refitting. M1 instead splits mutation rows. These
+          are different questions, so M1 is not ranked against the tumor models.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Evaluation populations" tabindex="0">
+          <table>
+            <caption>Saved split populations. Label 0 is lung adenocarcinoma; label 1 is melanoma.</caption>
+            <thead><tr><th scope="col">Unit and partition</th><th scope="col">Lung</th><th scope="col">Melanoma</th><th scope="col">Total</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Tumor development</th><td>34</td><td>54</td><td>88</td></tr>
+              <tr><th scope="row">Tumor final test</th><td>8</td><td>14</td><td>22</td></tr>
+              <tr><th scope="row">M1 row development</th><td>987,903</td><td>1,828,418</td><td>2,816,321</td></tr>
+              <tr><th scope="row">M1 row final test</th><td>246,976</td><td>457,105</td><td>704,081</td></tr>
             </tbody>
           </table>
         </div>
         <p>
-          M1 belongs outside that ranking. Its row-level OOF accuracy was
-          69.42% with AUROC 0.7285; its final accuracy was 69.37% with AUROC
-          0.7281. On final rows, lung adenocarcinoma recall was only 33.20%,
-          compared with melanoma recall of 88.92%. Overall accuracy hid that
-          large class imbalance in errors.
+          In fold $k$, fitting uses the other four development folds. The scaler,
+          applicable imputer and MDS model, and classifier are fitted only within
+          that training scope. The remaining fold supplies validation predictions.
+          Concatenating those predictions gives one out-of-fold (OOF) prediction
+          per development identity, not an in-sample training score.
+          Validation loss controls neural early stopping; the final test controls
+          nothing about rank, transforms, hyperparameters, or stopping duration.
+          This distinction matters for preprocessing leakage.<d-cite key="sklearn-leakage"></d-cite>
         </p>
-        <d-figure data-figure="cancer-results">
-          <div class="figure-body" data-figure-body></div>
-          <figcaption>
-            <b>Figure 1:</b> Inspect saved real-data confusion counts and class
-            metrics. Switch between pooled OOF development and final test, and
-            between experiments. M1 has mutation-row units; the others have
-            tumor units. Loading the aggregate measurements does not run training.
-          </figcaption>
-        </d-figure>
+        <d-math block tabindex="0">\hat p_i^{\mathrm{OOF}}=f_{-k(i)}(x_i),\qquad e_{\mathrm{final}}=\mathrm{round}\bigl(\mathrm{median}(e_1^*,\ldots,e_5^*)\bigr)</d-math>
         <p>
-          <a href="../../articles/cancer-classification-results.json" download>Download the aggregate confusion counts, AUROC values, and source audit</a>.
-          This snapshot contains no individual tumor records. Precision, recall,
-          support, and accuracy can be recomputed from its counts; AUROC is a
-          saved probability-based measurement and cannot be recovered from a
-          thresholded confusion matrix alone.
+          Here $k(i)$ is row $i$'s validation fold. The notation $f_{-k(i)}$ means
+          that preprocessing and weight updates exclude that fold, not that every
+          selection decision is independent of it: its labels select the best
+          epoch $e_k^*$. Neural OOF predictions are therefore validation-selected,
+          and can be optimistic relative to an untouched evaluation of the entire
+          selection procedure. They are not nested-cross-validation estimates.
+          A new neural model is then fitted on all development data for the
+          fixed duration $e_{\mathrm{final}}$. OOF pooling and a mean over fold
+          scores are different summaries; a pooled AUROC also compares scores
+          from different fold models. Neither is a confidence interval.
         </p>
-
-        <h2 id="class-metrics">What the class metrics add</h2>
-        <p>
-          M2 and M4 each made five OOF errors, but not the same class tradeoff.
-          M2's confusion counts were 31 correct and 3 missed lung tumors,
-          with 2 missed and 52 correct melanomas. M4 had 32 correct and 2 missed
-          lung tumors, with 3 missed and 51 correct melanomas.
-        </p>
-        <div class="table-scroll" role="region" aria-label="Mutation model class metrics" tabindex="0">
+        <div class="table-scroll" role="region" aria-label="Classifier settings" tabindex="0">
           <table>
-            <caption>Pooled OOF class metrics: lung support 34, melanoma support 54.</caption>
-            <thead><tr><th scope="col">ID</th><th scope="col">Lung precision</th><th scope="col">Lung recall</th><th scope="col">Melanoma precision</th><th scope="col">Melanoma recall</th></tr></thead>
+            <caption>Settings actually run, proposed for this reconstruction—not recovered historical defaults.</caption>
+            <thead><tr><th scope="col">Setting</th><th scope="col">M1</th><th scope="col">Other neural runs</th><th scope="col">S0</th></tr></thead>
             <tbody>
-              <tr><th scope="row">M2</th><td>93.94%</td><td>91.18%</td><td>94.55%</td><td>96.30%</td></tr>
-              <tr><th scope="row">M3</th><td>94.12%</td><td>94.12%</td><td>96.30%</td><td>96.30%</td></tr>
-              <tr><th scope="row">M4</th><td>91.43%</td><td>94.12%</td><td>96.23%</td><td>94.44%</td></tr>
-              <tr><th scope="row">M5</th><td>91.89%</td><td>100%</td><td>100%</td><td>94.44%</td></tr>
+              <tr><th scope="row">Architecture</th><td>14 → 16 → 8 → 1</td><td>Input → 16 → 8 → 1</td><td>Linear log-odds + sigmoid</td></tr>
+              <tr><th scope="row">Hidden/output activations</th><td>ReLU / sigmoid</td><td>ReLU / sigmoid</td><td>Sigmoid</td></tr>
+              <tr><th scope="row">Optimizer</th><td>Adam, 0.001</td><td>Adam, 0.001</td><td>L-BFGS, at most 2,000 iterations</td></tr>
+              <tr><th scope="row">Penalty</th><td>Kernel L2, 0.0001</td><td>Kernel L2, 0.0001</td><td>L2, C = 1; intercept unpenalized</td></tr>
+              <tr><th scope="row">Batch size / maximum epochs</th><td>4,096 / 50</td><td>16 / 200</td><td>Full-batch objective</td></tr>
+              <tr><th scope="row">Early stopping</th><td>Validation loss; patience 10</td><td>Validation loss; patience 10</td><td>Optimizer convergence</td></tr>
+              <tr><th scope="row">Class weights</th><td>None</td><td>None</td><td>None</td></tr>
             </tbody>
           </table>
         </div>
         <p>
-          M5 made three OOF errors, all melanomas predicted as lung cancer.
-          Its perfect lung recall and perfect melanoma precision are linked
-          consequences of having no lung tumors predicted as melanoma, not two
-          independent achievements. The apparent differences among M2–M5 are
-          only one or two development errors. One split and 88 tumors do not
-          establish a reliable winner.
+          Every model estimates $p_i=P(y_i=1\mid x_i)$, with melanoma positive.
+          The preselected decision rule is $\hat y_i=\mathbf{1}\{p_i\geq0.5\}$.
+          For melanoma, true positives (TP) are correctly predicted melanomas;
+          false positives (FP) are lung tumors called melanoma. False negatives
+          (FN) are melanomas called lung, and true negatives (TN) are correct lung predictions.
         </p>
+        <d-math block tabindex="0">\mathrm{precision}=\frac{TP}{TP+FP},\quad\mathrm{recall}=\frac{TP}{TP+FN},\quad\mathrm{FPR}=\frac{FP}{FP+TN}</d-math>
         <p>
-          On the final 22 tumors, M2–M5 and S0 all had confusion matrix
-          <code>[[8, 0], [0, 14]]</code>.
-          Both classes therefore had precision and recall of one on this test
-          set. That is a valid description of these counts, not a claim of
-          perfect population performance. Patient-level independence was not
-          verified, and no external cohort was evaluated.
+          A ROC curve plots recall (true positive rate) against false positive
+          rate as the threshold changes. AUROC summarizes that ranking curve;
+          it is not another curve or a threshold-0.5 accuracy. A precision–recall
+          (PR) curve exposes the precision cost of recovering more melanomas.
+          Its no-skill reference is positive prevalence, which differs slightly
+          between development and final test. Confusion matrices show one fixed
+          decision rule, not the whole ranking. Each experiment below shows both
+          pooled OOF and final curves, then fold variation and training history.
+          All charts are visible without a selector; open any image for full size.
         </p>
 
-        <h2 id="interpretation">Plausible explanations are not demonstrated causes</h2>
+        <h2 id="overview">Results at a glance</h2>
+        <div class="table-scroll" role="region" aria-label="Measured tumor-level results; M1 has a different prediction unit and is excluded." tabindex="0"><table><caption>Measured tumor-level results; M1 has a different prediction unit and is excluded.</caption><thead><tr><th scope="col">Run</th><th scope="col">OOF errors / 88</th><th scope="col">OOF accuracy</th><th scope="col">OOF AUROC</th><th scope="col">Final correct / 22</th><th scope="col">Final AUROC</th></tr></thead><tbody><tr><th scope="row">M2</th><td>5</td><td>94.32%</td><td>0.9935</td><td>22</td><td>1.0000</td></tr><tr><th scope="row">M3</th><td>4</td><td>95.45%</td><td>0.9973</td><td>22</td><td>1.0000</td></tr><tr><th scope="row">M4</th><td>5</td><td>94.32%</td><td>0.9929</td><td>22</td><td>1.0000</td></tr><tr><th scope="row">M5</th><td>3</td><td>96.59%</td><td>0.9973</td><td>22</td><td>1.0000</td></tr><tr><th scope="row">S0</th><td>5</td><td>94.32%</td><td>0.9766</td><td>22</td><td>1.0000</td></tr><tr><th scope="row">S1</th><td>7</td><td>92.05%</td><td>0.9472</td><td>14</td><td>0.7188</td></tr><tr><th scope="row">S2</th><td>40</td><td>54.55%</td><td>0.6468</td><td>13</td><td>0.6295</td></tr></tbody></table></div><figure id="figure-tumor-comparison"><a href="../../articles/cancer-classification/tumor-comparison.svg" aria-label="Open full-size AUROC comparison for seven tumor-level experiments"><img src="../../articles/cancer-classification/tumor-comparison.svg" alt="AUROC comparison for seven tumor-level experiments" loading="lazy" width="5268" height="3252" /></a><figcaption><b>Figure 1:</b> Five pipelines separate all 22 final cases; S1 and S2 do not. The connected points compare two evaluations, not a learning trajectory or confidence interval. These small test sets do not establish a population ranking.</figcaption></figure>
         <p>
-          Aggregation gives a tumor classifier many mutations rather than one
-          noisy local observation. Counts preserve burden and composition;
-          frequencies emphasize composition. The strong M4 and M5 results show
-          that an explicit burden feature was not necessary for this split.
-          They do not identify the biological mechanism or exclude technical
-          and cohort confounding.
-        </p>
-        <p>
-          Tobacco-associated and ultraviolet-associated mutation processes make
-          the lung/melanoma distinction biologically plausible.<d-cite key="alexandrov2020"></d-cite>
-          These classifiers did not estimate signature exposures or establish
-          which signatures caused their decisions. Prediction and signature
-          attribution are different analyses.
-        </p>
-        <p>
-          The sample results also resist a simple “wide data failed” story.
-          S0 matched the perfect final mutation-model scores. S1 did not: its
-          roughly 24 million neural parameters faced only 88 final-fit tumors,
-          and its final accuracy fell to 14/22. That equals the majority baseline
-          numerically, but its predictions were not all melanoma: its confusion
-          matrix was <code>[[7, 1], [7, 7]]</code>.
-          Parameter count and overfitting are plausible concerns, not a measured
-          causal explanation for the failure.
-        </p>
-        <p>
-          S2 scored 13/22, with confusion matrix
-          <code>[[7, 1], [8, 6]]</code>.
-          Losing label information through an unsupervised reduction is one
-          hypothesis. Coordinate scale and downstream optimization are others.
-          We did not isolate them. Its 62% spectrum figure is not evidence that
-          it retained 62% of the information needed to classify cancer.
-        </p>
-        <p>
-          All three sample pipelines share the unresolved <code>NA</code>
-          interpretation and nonconverged imputation diagnostics. Even a correct
-          implementation cannot turn an unverified input assumption into a
-          biological fact.
+          The mutation tumor models make three to five development errors and no
+          final errors. S0, despite its much wider input, also gets all final
+          cases right. S1 and S2 do not reproduce that result. Keep the size of
+          the final test in view: one extra error changes its accuracy by about
+          4.55 percentage points. The always-melanoma baseline is $14/22=63.64\%$.
+          None of the following comparisons is external validation.
         </p>
 
-        <h2 id="reproduction">What is reproducible, and what remains open</h2>
+        <h2 id="experiment-M1">M1 · Can one mutation predict the tumor label?</h2>
+        <h3>Setup and run</h3>
         <p>
-          The completed local suite passed 281 tests, including actual GPU
-          tests. Checks covered source parsing and the single exclusion,
-          representation totals, split identity, held-out independence,
-          decomposition agreement, rank-deficient projection, MDS self-projection,
-          CPU/GPU objective agreement, model reload, and end-to-end fixture runs.
-          All eight real-data bundles completed separately. Final audits checked
-          unchanged source hashes, matching tumor manifests, full model widths,
-          and the six shared sample preprocessing scopes. Warnings remained
-          recorded; a passing suite was not treated as proof of data validity.
+          M1 asks how informative a single mutation's local context is. The input
+          is the 14-indicator vector defined above, standardized with training-only
+          means and scales. Each mutation inherits its tumor's supplied label.
+          No tumor identifier is an input. The neural model sees rows rather than
+          a tumor histogram; it cannot directly aggregate that tumor's evidence.
         </p>
         <p>
-          In the experiment project, preparation and fitting are separate
-          commands. A fresh output path is required. Synthetic fixture mode
-          checks the software and never counts as a real-data result:
+          Row identities are disjoint across partitions, but the same tumor can
+          contribute rows to both. This is deliberately a single-mutation
+          prediction task, not a test on unseen tumors. The development-selected final refit duration was 46 epochs; the individual fold stopping records are tabulated below.
         </p>
-        <pre class="table-scroll" tabindex="0" aria-label="Local experiment commands"><code class="language-bash">uv sync --locked
-uv run python -m cancer_therapy prepare
-uv run python -m cancer_therapy run M1 M2 M3 M4 M5 S0 S1 S2 --fixture --device cpu --output results/new-fixture
-uv run python -m cancer_therapy run M1 M2 M3 M4 M5 S0 S1 S2 --device cuda --output results/new-full-data</code></pre>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="M1: separate development and final evaluations" tabindex="0"><table><caption>M1: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>1,955,004 / 2,816,321</td><td>69.42%</td><td>0.7285</td></tr><tr><th scope="row">Final test</th><td>488,442 / 704,081</td><td>69.37%</td><td>0.7281</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="M1: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>M1: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>62.02%</td><td>33.06%</td><td>987,903</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>71.12%</td><td>89.06%</td><td>1,828,418</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>61.81%</td><td>33.20%</td><td>246,976</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>71.13%</td><td>88.92%</td><td>457,105</td></tr></tbody></table></div><figure id="figure-M1-roc"><a href="../../articles/cancer-classification/M1-roc.svg" aria-label="Open full-size M1 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M1-roc.svg" alt="M1 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 2:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-M1-pr"><a href="../../articles/cancer-classification/M1-pr.svg" aria-label="Open full-size M1 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M1-pr.svg" alt="M1 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 3:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-M1-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/M1-confusion-development.svg" aria-label="Open full-size M1 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/M1-confusion-development.svg" alt="M1 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/M1-confusion-final.svg" aria-label="Open full-size M1 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/M1-confusion-final.svg" alt="M1 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 4:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-M1-folds"><a href="../../articles/cancer-classification/M1-folds.svg" aria-label="Open full-size M1 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/M1-folds.svg" alt="M1 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 5:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="M1: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>M1: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>563,265</td><td>69.41%</td><td>0.7290</td><td>50</td><td>50</td></tr><tr><th scope="row">2</th><td>563,264</td><td>69.45%</td><td>0.7291</td><td>46</td><td>50</td></tr><tr><th scope="row">3</th><td>563,264</td><td>69.41%</td><td>0.7277</td><td>44</td><td>50</td></tr><tr><th scope="row">4</th><td>563,264</td><td>69.37%</td><td>0.7281</td><td>49</td><td>50</td></tr><tr><th scope="row">5</th><td>563,264</td><td>69.44%</td><td>0.7287</td><td>40</td><td>50</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>69.42% ± 0.03%</td><td>0.7285 ± 0.0006</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-M1-loss"><a href="../../articles/cancer-classification/M1-loss.svg" aria-label="Open full-size M1 five validation-loss training histories"><img src="../../articles/cancer-classification/M1-loss.svg" alt="M1 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 6:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
         <p>
-          The downloadable snapshot supports inspection of the reported
-          aggregate results. It is not a distribution of the source matrices,
-          trained weights, or the complete local artifact bundles. Those
-          bundles also preserve fold summaries, PR and ROC curves, numerical
-          histories, and identity-linked probabilities.
+          The OOF and final ROC curves are close, but that agreement does not
+          remove shared-tumor dependence. The class-specific result is more
+          informative than overall accuracy: roughly two thirds of lung mutation
+          rows are predicted as melanoma at the fixed threshold. Melanoma recall
+          is much higher. Millions of rows make these percentages numerically
+          stable; they do not create millions of independent patients. The
+          experiment establishes limited row-level discrimination, not a clinical
+          classifier or a clean baseline for the tumor-split experiments.
+        </p>
+
+        <h2 id="experiment-M2">M2 · Aggregate the marginal mutation counts</h2>
+        <h3>Setup and run</h3>
+        <p>
+          M2 changes the prediction unit to a tumor. It sums the indicators for
+          all retained mutations, preserving how often each upstream base,
+          substitution, and downstream base occurs. For indicator position $j$:
+        </p>
+        <d-math block tabindex="0">x_{tj}^{\mathrm{M2}}=\sum_{r=1}^{n_t}x_{trj},\qquad\sum_{j\in G}x_{tj}^{\mathrm{M2}}=n_t</d-math>
+        <p>
+          $G$ is any one of the three indicator groups. Each group's total is the
+          tumor's retained mutation count, so M2 retains both composition and
+          burden. The 14 counts are standardized within each training scope and
+          passed to the shared neural architecture. No imputation or MDS is used.
+          The development-selected final refit duration was 149 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="M2: separate development and final evaluations" tabindex="0"><table><caption>M2: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>83 / 88</td><td>94.32%</td><td>0.9935</td></tr><tr><th scope="row">Final test</th><td>22 / 22</td><td>100.00%</td><td>1.0000</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="M2: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>M2: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>93.94%</td><td>91.18%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>94.55%</td><td>96.30%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>100.00%</td><td>100.00%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>100.00%</td><td>100.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-M2-roc"><a href="../../articles/cancer-classification/M2-roc.svg" aria-label="Open full-size M2 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M2-roc.svg" alt="M2 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 7:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-M2-pr"><a href="../../articles/cancer-classification/M2-pr.svg" aria-label="Open full-size M2 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M2-pr.svg" alt="M2 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 8:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-M2-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/M2-confusion-development.svg" aria-label="Open full-size M2 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/M2-confusion-development.svg" alt="M2 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/M2-confusion-final.svg" aria-label="Open full-size M2 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/M2-confusion-final.svg" alt="M2 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 9:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-M2-folds"><a href="../../articles/cancer-classification/M2-folds.svg" aria-label="Open full-size M2 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/M2-folds.svg" alt="M2 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 10:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="M2: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>M2: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>88.89%</td><td>0.9870</td><td>56</td><td>66</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td><td>200</td><td>200</td></tr><tr><th scope="row">3</th><td>18</td><td>94.44%</td><td>1.0000</td><td>146</td><td>156</td></tr><tr><th scope="row">4</th><td>17</td><td>94.12%</td><td>0.9848</td><td>199</td><td>200</td></tr><tr><th scope="row">5</th><td>17</td><td>94.12%</td><td>0.9857</td><td>149</td><td>159</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>94.31% ± 3.52%</td><td>0.9915 ± 0.0070</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-M2-loss"><a href="../../articles/cancer-classification/M2-loss.svg" aria-label="Open full-size M2 five validation-loss training histories"><img src="../../articles/cancer-classification/M2-loss.svg" alt="M2 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 11:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          M2 makes five OOF errors: three lung tumors called melanoma and two
+          melanomas called lung. All final cases are correct. Aggregated marginal
+          counts are sufficient for strong discrimination on this split, despite
+          discarding which three features occurred together in one mutation.
+          M1 versus M2 is not a controlled aggregation ablation: the prediction
+          unit and the split boundary both change. M4 is the more direct test of
+          whether explicit mutation-count scale is necessary.
+        </p>
+
+        <h2 id="experiment-M3">M3 · Preserve the joint sequence context</h2>
+        <h3>Setup and run</h3>
+        <p>
+          M3 counts complete contexts rather than separate marginals. A bin is
+          indexed by upstream base $b$, substitution $s$, and downstream base $c$:
+        </p>
+        <d-math block tabindex="0">h_t(b,s,c)=\sum_{r=1}^{n_t}\mathbf{1}\{b_{tr}=b,\ s_{tr}=s,\ c_{tr}=c\},\qquad\sum_{b,s,c}h_t(b,s,c)=n_t</d-math>
+        <p>
+          Flattening in upstream–substitution–downstream order yields 96 counts.
+          Summing over the other axes recovers M2's marginals. Two tumors can
+          therefore share M2 features yet differ in M3 if their feature
+          associations differ. M3 uses the same tumor assignments, scaler rule,
+          and neural settings as M2; its input layer is wider. The development-selected final refit duration was 95 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="M3: separate development and final evaluations" tabindex="0"><table><caption>M3: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>84 / 88</td><td>95.45%</td><td>0.9973</td></tr><tr><th scope="row">Final test</th><td>22 / 22</td><td>100.00%</td><td>1.0000</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="M3: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>M3: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>94.12%</td><td>94.12%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>96.30%</td><td>96.30%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>100.00%</td><td>100.00%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>100.00%</td><td>100.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-M3-roc"><a href="../../articles/cancer-classification/M3-roc.svg" aria-label="Open full-size M3 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M3-roc.svg" alt="M3 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 12:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-M3-pr"><a href="../../articles/cancer-classification/M3-pr.svg" aria-label="Open full-size M3 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M3-pr.svg" alt="M3 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 13:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-M3-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/M3-confusion-development.svg" aria-label="Open full-size M3 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/M3-confusion-development.svg" alt="M3 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/M3-confusion-final.svg" aria-label="Open full-size M3 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/M3-confusion-final.svg" alt="M3 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 14:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-M3-folds"><a href="../../articles/cancer-classification/M3-folds.svg" aria-label="Open full-size M3 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/M3-folds.svg" alt="M3 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 15:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="M3: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>M3: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>88.89%</td><td>0.9870</td><td>55</td><td>65</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td><td>200</td><td>200</td></tr><tr><th scope="row">3</th><td>18</td><td>94.44%</td><td>1.0000</td><td>33</td><td>43</td></tr><tr><th scope="row">4</th><td>17</td><td>94.12%</td><td>1.0000</td><td>95</td><td>105</td></tr><tr><th scope="row">5</th><td>17</td><td>100.00%</td><td>1.0000</td><td>200</td><td>200</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>95.49% ± 4.18%</td><td>0.9974 ± 0.0052</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-M3-loss"><a href="../../articles/cancer-classification/M3-loss.svg" aria-label="Open full-size M3 five validation-loss training histories"><img src="../../articles/cancer-classification/M3-loss.svg" alt="M3 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 16:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          Four OOF tumors are misclassified, two from each class. Final performance
+          matches M2. The joint representation changes the learned function and
+          removes one development error in aggregate, but one error is not enough
+          to establish that joint context is reliably superior. There is no
+          repeated-split comparison or external cohort here. The curves support
+          strong ranking on this evaluation, not a causal claim about particular
+          mutational processes.
+        </p>
+
+        <h2 id="experiment-M4">M4 · Normalize the marginal counts</h2>
+        <h3>Setup and run</h3>
+        <p>
+          M4 divides each M2 count by that same tumor's retained mutation count.
+          It keeps the same 14 positions while removing their explicit burden scale:
+        </p>
+        <d-math block tabindex="0">x_{tj}^{\mathrm{M4}}=\frac{x_{tj}^{\mathrm{M2}}}{n_t},\qquad\sum_{j\in G}x_{tj}^{\mathrm{M4}}=1</d-math>
+        <p>
+          These are frequencies within a tumor, not proportions computed over the
+          cohort. There are three normalized groups, not one distribution across
+          all 14 positions. Training-only standardization follows normalization.
+          The tumor split and neural settings match M2. The development-selected final refit duration was 139 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="M4: separate development and final evaluations" tabindex="0"><table><caption>M4: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>83 / 88</td><td>94.32%</td><td>0.9929</td></tr><tr><th scope="row">Final test</th><td>22 / 22</td><td>100.00%</td><td>1.0000</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="M4: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>M4: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>91.43%</td><td>94.12%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>96.23%</td><td>94.44%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>100.00%</td><td>100.00%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>100.00%</td><td>100.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-M4-roc"><a href="../../articles/cancer-classification/M4-roc.svg" aria-label="Open full-size M4 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M4-roc.svg" alt="M4 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 17:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-M4-pr"><a href="../../articles/cancer-classification/M4-pr.svg" aria-label="Open full-size M4 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M4-pr.svg" alt="M4 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 18:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-M4-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/M4-confusion-development.svg" aria-label="Open full-size M4 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/M4-confusion-development.svg" alt="M4 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/M4-confusion-final.svg" aria-label="Open full-size M4 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/M4-confusion-final.svg" alt="M4 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 19:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-M4-folds"><a href="../../articles/cancer-classification/M4-folds.svg" aria-label="Open full-size M4 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/M4-folds.svg" alt="M4 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 20:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="M4: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>M4: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>88.89%</td><td>0.9351</td><td>47</td><td>57</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td><td>200</td><td>200</td></tr><tr><th scope="row">3</th><td>18</td><td>94.44%</td><td>1.0000</td><td>60</td><td>70</td></tr><tr><th scope="row">4</th><td>17</td><td>88.24%</td><td>0.9848</td><td>139</td><td>149</td></tr><tr><th scope="row">5</th><td>17</td><td>100.00%</td><td>1.0000</td><td>190</td><td>200</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>94.31% ± 5.12%</td><td>0.9840 ± 0.0252</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-M4-loss"><a href="../../articles/cancer-classification/M4-loss.svg" aria-label="Open full-size M4 five validation-loss training histories"><img src="../../articles/cancer-classification/M4-loss.svg" alt="M4 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 21:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          M4 and M2 each make five OOF errors, but with different class totals.
+          M4 misses two lung tumors and three melanomas; M2 misses three and two.
+          The identical overall accuracy hides that tradeoff. Final classification
+          remains perfect on these 22 tumors. Explicit burden scale is therefore
+          not necessary to obtain the strong result on this split. That does not
+          prove the inputs contain no other burden-related or technical signals.
+        </p>
+
+        <h2 id="experiment-M5">M5 · Normalize the joint-context histogram</h2>
+        <h3>Setup and run</h3>
+        <p>
+          M5 combines M3's joint representation with M4's own-tumor denominator.
+          Its 96 positions form one empirical context distribution:
+        </p>
+        <d-math block tabindex="0">f_t(b,s,c)=\frac{h_t(b,s,c)}{n_t},\qquad\sum_{b,s,c}f_t(b,s,c)=1</d-math>
+        <p>
+          No denominator is added as a feature. The common tumor assignments,
+          training-only scaler, and neural settings make M3 versus M5 a count–frequency
+          comparison with the same context vocabulary. The development-selected final refit duration was 60 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="M5: separate development and final evaluations" tabindex="0"><table><caption>M5: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>85 / 88</td><td>96.59%</td><td>0.9973</td></tr><tr><th scope="row">Final test</th><td>22 / 22</td><td>100.00%</td><td>1.0000</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="M5: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>M5: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>91.89%</td><td>100.00%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>100.00%</td><td>94.44%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>100.00%</td><td>100.00%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>100.00%</td><td>100.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-M5-roc"><a href="../../articles/cancer-classification/M5-roc.svg" aria-label="Open full-size M5 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M5-roc.svg" alt="M5 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 22:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-M5-pr"><a href="../../articles/cancer-classification/M5-pr.svg" aria-label="Open full-size M5 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/M5-pr.svg" alt="M5 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 23:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-M5-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/M5-confusion-development.svg" aria-label="Open full-size M5 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/M5-confusion-development.svg" alt="M5 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/M5-confusion-final.svg" aria-label="Open full-size M5 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/M5-confusion-final.svg" alt="M5 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 24:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-M5-folds"><a href="../../articles/cancer-classification/M5-folds.svg" aria-label="Open full-size M5 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/M5-folds.svg" alt="M5 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 25:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="M5: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>M5: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>94.44%</td><td>1.0000</td><td>41</td><td>51</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td><td>200</td><td>200</td></tr><tr><th scope="row">3</th><td>18</td><td>88.89%</td><td>0.9870</td><td>8</td><td>18</td></tr><tr><th scope="row">4</th><td>17</td><td>100.00%</td><td>1.0000</td><td>60</td><td>70</td></tr><tr><th scope="row">5</th><td>17</td><td>100.00%</td><td>1.0000</td><td>193</td><td>200</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>96.67% ± 4.44%</td><td>0.9974 ± 0.0052</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-M5-loss"><a href="../../articles/cancer-classification/M5-loss.svg" aria-label="Open full-size M5 five validation-loss training histories"><img src="../../articles/cancer-classification/M5-loss.svg" alt="M5 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 26:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          M5 has the fewest pooled OOF errors among these mutation tumor models:
+          three melanomas are called lung; no lung tumor is called melanoma.
+          Perfect lung recall and perfect melanoma precision are linked consequences
+          of that same empty confusion cell, not independent achievements.
+          The final predictions are again all correct. M5 is the best observed
+          OOF accuracy in this small comparison, not a demonstrated population
+          winner. It differs from M3 by one development error and from M2/M4 by two.
+        </p>
+
+        <h2 id="imputation">The shared missing-data model for S0–S2</h2>
+        <p>
+          The sample experiments start from a much wider matrix, not from the
+          14- or 96-bin mutation histogram. Every original feature is retained.
+          Because most cells are <code>NA</code>, their treatment is central to
+          the result, not incidental preprocessing. S0–S2 share each fitted
+          imputer and scaler only when the exact training scope matches.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Imputation notation" tabindex="0">
+          <table>
+            <caption>Notation for one classifier-training scope.</caption>
+            <thead><tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Shape or domain</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">$X$</th><td>Sample features for training tumors only</td><td>$n\times p$, with $p=1,499,663$</td></tr>
+              <tr><th scope="row">$\Omega$</th><td>Positions with observed numeric values</td><td>Subset of row–feature positions</td></tr>
+              <tr><th scope="row">$\mu_j$</th><td>Mean of observed training values for feature $j$</td><td>One fixed offset per feature</td></tr>
+              <tr><th scope="row">$m$</th><td>Candidate reconstruction rank</td><td>1, 2, 5, 10, or 20</td></tr>
+              <tr><th scope="row">$A,V$</th><td>Row coefficients and feature loadings</td><td>$n\times m$ and $p\times m$</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Alternate a decomposition and a missing-only update</h3>
+        <p>
+          Fix observed training column means, center the observed entries, and
+          initialize missing centered entries to zero. A rank-$m$ decomposition
+          supplies coefficients and loadings. Then replace only missing entries
+          from that reconstruction, restore observed entries exactly, and
+          decompose the updated matrix again. A single SVD followed by one fill
+          would not implement this procedure.
+        </p>
+        <d-math block tabindex="0">\hat x_{ij}=\mu_j+a_i^{\mathsf T}v_j</d-math>
+        <d-math block tabindex="0">x_{ij}^{(q+1)}=\begin{cases}x_{ij},&amp;(i,j)\in\Omega\\ \mu_j+(a_i^{(q)})^{\mathsf T}v_j^{(q)},&amp;(i,j)\in\Omega^{c}\end{cases}</d-math>
+        <p>
+          The iteration index is $q$. For example, an offset of 2, row coefficient
+          $(1,-1)$, and feature loading $(0.5,0.2)$ reconstruct a missing value as
+          $2+1(0.5)-1(0.2)=2.3$. This is an illustration, not an observed sample.
+          If the value were observed as zero, it would remain zero instead.
+          Because observed values are restored, the completed matrix need not
+          itself have rank $m$.
+        </p>
+        <h3>Select rank with entries, not classifier test labels</h3>
+        <p>
+          In each training scope, three seeded repeats hide 10% of eligible
+          observed entries while retaining row and column support. Every candidate
+          rank uses the same masks. Mean hidden-entry RMSE chooses the rank, with
+          lower rank breaking a tie; the winner is refitted on the original
+          observations. Neither validation tumors nor final-test tumors enter this
+          rank comparison. Entry reconstruction and classifier validation answer
+          different questions.
+        </p>
+        <figure id="figure-imputation-ranks"><a href="../../articles/cancer-classification/imputation-ranks.svg" aria-label="Open full-size Hidden-entry reconstruction RMSE by rank and training scope"><img src="../../articles/cancer-classification/imputation-ranks.svg" alt="Hidden-entry reconstruction RMSE by rank and training scope" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 27:</b> Each line is one classifier-training scope. Each point averages the same three seeded entry holdouts for that scope. Rank 5 minimizes mean hidden-entry RMSE in every scope. A log scale keeps all six scopes readable. This is reconstruction evidence, not classification validation.</figcaption></figure><figure id="figure-imputation-change"><a href="../../articles/cancer-classification/imputation-change.svg" aria-label="Open full-size Missing-value relative changes across six selected-rank refits"><img src="../../articles/cancer-classification/imputation-change.svg" alt="Missing-value relative changes across six selected-rank refits" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 28:</b> All six rank-5 refits stop on the observed-RMSE plateau rule while missing-value changes remain above the convergence tolerance. The first update is omitted because its relative change divides by a zero initialization norm. A stopping rule firing does not prove convergence.</figcaption></figure>
+        <div class="table-scroll" role="region" aria-label="Shared S0–S2 imputation refits; no features are discarded" tabindex="0"><table><caption>Shared S0–S2 imputation refits; no features are discarded</caption><thead><tr><th scope="col">Fit scope</th><th scope="col">Rank</th><th scope="col">Iterations</th><th scope="col">Stop</th><th scope="col">Unsupported columns</th></tr></thead><tbody><tr><th scope="row">Fold 1</th><td>5</td><td>9</td><td>plateau</td><td>144,540</td></tr><tr><th scope="row">Fold 2</th><td>5</td><td>9</td><td>plateau</td><td>162,556</td></tr><tr><th scope="row">Fold 3</th><td>5</td><td>9</td><td>plateau</td><td>158,118</td></tr><tr><th scope="row">Fold 4</th><td>5</td><td>8</td><td>plateau</td><td>131,476</td></tr><tr><th scope="row">Fold 5</th><td>5</td><td>9</td><td>plateau</td><td>122,774</td></tr><tr><th scope="row">final</th><td>5</td><td>9</td><td>plateau</td><td>73,033</td></tr></tbody></table></div>
+        <p>
+          All six scopes select rank 5, and all six refits stop on a plateau,
+          not convergence. The plateau rule means observed reconstruction RMSE
+          fails to improve relatively by more than $10^{-4}$ for five iterations.
+          The other stopping conditions are missing-value relative change below
+          $10^{-4}$ or a 100-iteration cap. Across the 90 entry-validation fits,
+          44 stop on plateau and 46 hit the cap. All outputs are finite, but finite
+          is not the same as converged; these warnings qualify all three sample runs.
+        </p>
+        <h3>Transform a new tumor without refitting the basis</h3>
+        <p>
+          For a held-out tumor, only its own observed entries fit row coefficients
+          against the frozen training offsets and loadings. If $O_i$ denotes its
+          usable observed feature positions:
+        </p>
+        <d-math block tabindex="0">a_i^*=\mathrm{arg\,min}_a\sum_{j\in O_i}(x_{ij}-\mu_j-v_j^{\mathsf T}a)^2</d-math>
+        <p>
+          The minimum-norm least-squares solution uses a relative singular-value
+          cutoff of $10^{-6}$. Missing values then use $\mu_j+v_j^{\mathsf T}a_i^*$;
+          observed values remain unchanged. One held-out tumor cannot alter the
+          basis or another held-out tumor's completion. Columns never observed
+          in training use the global observed training mean and zero loadings;
+          unsupported rows use zero coefficients. The final training scope has
+          73,033 unsupported columns. These explicit fallbacks preserve feature
+          positions, not biological evidence. Negative completions are recorded,
+          not clipped. Training-fitted standardization follows imputation.
+        </p>
+
+        <h2 id="experiment-S0">S0 · A linear classifier on the full sample matrix</h2>
+        <h3>Setup and run</h3>
+        <p>
+          S0 uses every imputed, standardized sample feature. L2 logistic
+          regression provides a linear log-odds baseline before introducing
+          another neural network or a dimension reduction. Let $z_i$ be the
+          completed, scaled training row and $\sigma$ the sigmoid:
+        </p>
+        <d-math block tabindex="0">p_i=\sigma(w^{\mathsf T}z_i+b),\quad\min_{w,b}\left[-\frac1n\sum_i\bigl(y_i\log p_i+(1-y_i)\log(1-p_i)\bigr)+\frac{\lVert w\rVert_2^2}{2Cn}\right]</d-math>
+        <p>
+          $C=1$ fixes the penalty; the intercept $b$ is not penalized. The GPU
+          implementation uses float64 L-BFGS for this same objective, checked
+          against the CPU library solver. Each fold is fitted from fresh model
+          state. There is no neural best-epoch rule. The final optimizer converged
+          after 80 iterations, with gradient infinity norm approximately
+          $9.0\times10^{-8}$, below the $10^{-7}$ tolerance. That is classifier
+          convergence, not imputation convergence.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="S0: separate development and final evaluations" tabindex="0"><table><caption>S0: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>83 / 88</td><td>94.32%</td><td>0.9766</td></tr><tr><th scope="row">Final test</th><td>22 / 22</td><td>100.00%</td><td>1.0000</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="S0: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>S0: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>96.77%</td><td>88.24%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>92.98%</td><td>98.15%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>100.00%</td><td>100.00%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>100.00%</td><td>100.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-S0-roc"><a href="../../articles/cancer-classification/S0-roc.svg" aria-label="Open full-size S0 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S0-roc.svg" alt="S0 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 29:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-S0-pr"><a href="../../articles/cancer-classification/S0-pr.svg" aria-label="Open full-size S0 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S0-pr.svg" alt="S0 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 30:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-S0-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/S0-confusion-development.svg" aria-label="Open full-size S0 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/S0-confusion-development.svg" alt="S0 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/S0-confusion-final.svg" aria-label="Open full-size S0 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/S0-confusion-final.svg" alt="S0 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 31:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-S0-folds"><a href="../../articles/cancer-classification/S0-folds.svg" aria-label="Open full-size S0 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/S0-folds.svg" alt="S0 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 32:</b> Every point evaluates a separate model on its weight-held-out development fold. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="S0: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>S0: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>83.33%</td><td>0.9091</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td></tr><tr><th scope="row">3</th><td>18</td><td>100.00%</td><td>1.0000</td></tr><tr><th scope="row">4</th><td>17</td><td>88.24%</td><td>1.0000</td></tr><tr><th scope="row">5</th><td>17</td><td>100.00%</td><td>1.0000</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>94.31% ± 7.13%</td><td>0.9818 ± 0.0364</td></tr></tbody></table></div>
+        <h3>Interpretation</h3>
+        <p>
+          S0 makes five OOF errors—four lung tumors called melanoma and one
+          melanoma called lung—and gets all final cases right. This rules out a
+          blanket description that the wide sample pipelines all performed poorly.
+          A penalized linear decision function works well on this evaluation.
+          It does not validate the meaning of <code>NA</code>, demonstrate robust
+          estimation of 1.5 million individual feature effects, or identify a
+          biological signature. Shared preprocessing assumptions still apply.
+        </p>
+
+        <h2 id="experiment-S1">S1 · A neural network on all sample features</h2>
+        <h3>Setup and run</h3>
+        <p>
+          S1 keeps S0's full-width imputation and scaling and replaces the linear
+          classifier with the shared 16- and 8-unit hidden layers. This gives
+          approximately 24 million trainable parameters, dominated by the first
+          dense layer, with only 88 tumors available for the final fit. No
+          feature subset, extra dimension reduction, or class weighting is added.
+          Matching training scopes reuse the same numerical preprocessing as S0.
+          The development-selected final refit duration was 5 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="S1: separate development and final evaluations" tabindex="0"><table><caption>S1: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>81 / 88</td><td>92.05%</td><td>0.9472</td></tr><tr><th scope="row">Final test</th><td>14 / 22</td><td>63.64%</td><td>0.7188</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="S1: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>S1: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>82.93%</td><td>100.00%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>100.00%</td><td>87.04%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>50.00%</td><td>87.50%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>87.50%</td><td>50.00%</td><td>14</td></tr></tbody></table></div><figure id="figure-S1-roc"><a href="../../articles/cancer-classification/S1-roc.svg" aria-label="Open full-size S1 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S1-roc.svg" alt="S1 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 33:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-S1-pr"><a href="../../articles/cancer-classification/S1-pr.svg" aria-label="Open full-size S1 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S1-pr.svg" alt="S1 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 34:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-S1-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/S1-confusion-development.svg" aria-label="Open full-size S1 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/S1-confusion-development.svg" alt="S1 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/S1-confusion-final.svg" aria-label="Open full-size S1 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/S1-confusion-final.svg" alt="S1 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 35:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-S1-folds"><a href="../../articles/cancer-classification/S1-folds.svg" aria-label="Open full-size S1 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/S1-folds.svg" alt="S1 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 36:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="S1: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>S1: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>83.33%</td><td>0.8961</td><td>23</td><td>33</td></tr><tr><th scope="row">2</th><td>18</td><td>100.00%</td><td>1.0000</td><td>8</td><td>18</td></tr><tr><th scope="row">3</th><td>18</td><td>94.44%</td><td>1.0000</td><td>1</td><td>11</td></tr><tr><th scope="row">4</th><td>17</td><td>88.24%</td><td>0.9091</td><td>5</td><td>15</td></tr><tr><th scope="row">5</th><td>17</td><td>94.12%</td><td>1.0000</td><td>2</td><td>12</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>92.03% ± 5.72%</td><td>0.9610 ± 0.0479</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-S1-loss"><a href="../../articles/cancer-classification/S1-loss.svg" aria-label="Open full-size S1 five validation-loss training histories"><img src="../../articles/cancer-classification/S1-loss.svg" alt="S1 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 37:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          S1's final accuracy equals the always-melanoma baseline numerically,
+          but its predictions are not that baseline. It gets seven lung tumors
+          and seven melanomas right, misses seven melanomas, and calls one lung
+          tumor melanoma. The confusion matrix and final PR curve make that
+          distinction visible. OOF discrimination is much better than final
+          discrimination; the large parameter count and small cohort make
+          instability or overfitting plausible explanations, not established causes.
+          We did not isolate model capacity, optimization, cohort composition,
+          and missing-data effects in separate controlled experiments.
+        </p>
+
+        <h2 id="experiment-S2">S2 · Ten-dimensional classical MDS before the network</h2>
+        <h3>Setup and run</h3>
+        <p>
+          S2 asks whether a low-dimensional account of the completed sample
+          geometry is useful to the classifier. It uses the same full-width
+          imputation and scaling, fits Euclidean classical multidimensional
+          scaling (MDS) inside the training scope, and sends ten coordinates to
+          the neural network. It does not select the ten dimensions from final
+          test performance or replace MDS with PCA.
         </p>
         <p>
-          The next scientific step is to verify how the sample matrix was
-          generated and what <code>NA</code> means. After that come checks for
-          patient and cohort dependence, independent validation, and targeted
-          tests of the competing explanations for S1 and S2. Changing those
-          assumptions or tuning after seeing this final test would create a new
-          experiment, not improve the evidence for this one.
+          For $n$ training rows, let $D^{(2)}$ be their $n\times n$ squared-distance
+          matrix. $H=I-\mathbf{1}\mathbf{1}^{\mathsf T}/n$ subtracts the mean.
+          Double centering converts distances to a centered Gram matrix:
+        </p>
+        <d-math block tabindex="0">B=-\tfrac12 H D^{(2)}H=V\Lambda V^{\mathsf T},\qquad Z_{10}=V_{10}\Lambda_{10}^{1/2}</d-math>
+        <p>
+          Columns of $V_{10}$ are the ten leading eigenvectors; the diagonal of
+          $\Lambda_{10}$ contains their positive eigenvalues. $Z_{10}$ therefore
+          has one row per training tumor and ten coordinates. Materially negative
+          spectra or requests beyond supported positive rank are errors, not
+          values to repair with an absolute sign.
+        </p>
+        <figure id="figure-S2-spectrum"><a href="../../articles/cancer-classification/S2-spectrum.svg" aria-label="Open full-size Cumulative positive MDS spectrum with ten-component cutoff"><img src="../../articles/cancer-classification/S2-spectrum.svg" alt="Cumulative positive MDS spectrum with ten-component cutoff" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 38:</b> The ten retained coordinates capture 62.0% of the final training fit's positive spectrum. This is a fraction of geometric variation, not of cancer-label information. It is not a classification score or explained clinical risk.</figcaption></figure>
+        <p>
+          A new tumor is projected against the frozen training reference, not
+          embedded jointly with other held-out rows. If $d_j^2$ is its squared
+          distance to training tumor $j$, $r_j$ is training row $j$'s mean squared
+          distance, and $g$ is the training grand mean:
+        </p>
+        <d-math block tabindex="0">b_j=-\tfrac12(d_j^2-\overline{d^2}-r_j+g),\qquad z_{\mathrm{new}}=b^{\mathsf T}V_{10}\Lambda_{10}^{-1/2}</d-math>
+        <p>
+          All reference points, distance means, eigenvectors, and eigenvalues
+          remain fixed. Coordinates are not standardized a second time. Tests
+          of training self-projection, serialization, and equivalence to Euclidean
+          PCA scores up to sign or rotation check the implementation; they do not
+          establish classification quality. The development-selected final refit duration was 45 epochs; the individual fold stopping records are tabulated below.
+        </p>
+        <h3>Results</h3>
+        <div class="table-scroll" role="region" aria-label="S2: separate development and final evaluations" tabindex="0"><table><caption>S2: separate development and final evaluations</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Correct / total</th><th scope="col">Accuracy</th><th scope="col">AUROC</th></tr></thead><tbody><tr><th scope="row">Pooled OOF</th><td>48 / 88</td><td>54.55%</td><td>0.6468</td></tr><tr><th scope="row">Final test</th><td>13 / 22</td><td>59.09%</td><td>0.6295</td></tr></tbody></table></div><div class="table-scroll" role="region" aria-label="S2: class metrics at the preselected threshold 0.5" tabindex="0"><table><caption>S2: class metrics at the preselected threshold 0.5</caption><thead><tr><th scope="col">Evaluation</th><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">Support</th></tr></thead><tbody><tr><th scope="row">OOF</th><td>Lung</td><td>44.23%</td><td>67.65%</td><td>34</td></tr><tr><th scope="row">OOF</th><td>Melanoma</td><td>69.44%</td><td>46.30%</td><td>54</td></tr><tr><th scope="row">Final</th><td>Lung</td><td>46.67%</td><td>87.50%</td><td>8</td></tr><tr><th scope="row">Final</th><td>Melanoma</td><td>85.71%</td><td>42.86%</td><td>14</td></tr></tbody></table></div><figure id="figure-S2-roc"><a href="../../articles/cancer-classification/S2-roc.svg" aria-label="Open full-size S2 ROC curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S2-roc.svg" alt="S2 ROC curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 39:</b> Solid cyan: pooled OOF. Dashed pink: final test. The diagonal is chance ranking. Curves use saved probability-based operating points; AUROC is not computed from the displayed confusion matrices.</figcaption></figure><figure id="figure-S2-pr"><a href="../../articles/cancer-classification/S2-pr.svg" aria-label="Open full-size S2 precision–recall curves for pooled OOF and final test"><img src="../../articles/cancer-classification/S2-pr.svg" alt="S2 precision–recall curves for pooled OOF and final test" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 40:</b> Melanoma is positive. Dotted horizontal lines show each partition's positive prevalence, the no-skill reference. The circle (OOF) and square (final) mark the fixed threshold 0.5. Steps retain the empirical threshold structure; no smoothing or precision envelope is added.</figcaption></figure><figure id="figure-S2-confusion"><div class="figure-panels"><a href="../../articles/cancer-classification/S2-confusion-development.svg" aria-label="Open full-size S2 confusion matrices with exact counts and within-class percentages: pooled OOF"><img src="../../articles/cancer-classification/S2-confusion-development.svg" alt="S2 confusion matrices with exact counts and within-class percentages: pooled OOF" loading="lazy" width="3396" height="2989" /></a><a href="../../articles/cancer-classification/S2-confusion-final.svg" aria-label="Open full-size S2 confusion matrices with exact counts and within-class percentages: final test"><img src="../../articles/cancer-classification/S2-confusion-final.svg" alt="S2 confusion matrices with exact counts and within-class percentages: final test" loading="lazy" width="3396" height="2989" /></a></div><figcaption><b>Figure 41:</b> Rows: true class. Columns: predicted class. Each cell shows an exact count and percentage of its true-class row. Both panels use the same 0–100% row-normalized color scale; this gives the two classes equal visual weight. The panels have different sample sizes.</figcaption></figure><figure id="figure-S2-folds"><a href="../../articles/cancer-classification/S2-folds.svg" aria-label="Open full-size S2 five validation-fold accuracy and AUROC scores"><img src="../../articles/cancer-classification/S2-folds.svg" alt="S2 five validation-fold accuracy and AUROC scores" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 42:</b> Every point evaluates a separate model on its weight-held-out development fold. The same validation fold selects the neural best epoch. Exact fold sizes and scores are tabulated below. Dotted references are pooled OOF scores, not means of fold scores. Connected points aid reading only; folds are not time steps or independent replications. Final test is not a sixth fold.</figcaption></figure><div class="table-scroll" role="region" aria-label="S2: validation-fold measurements; descriptive SD is not a confidence interval" tabindex="0"><table><caption>S2: validation-fold measurements; descriptive SD is not a confidence interval</caption><thead><tr><th scope="col">Fold</th><th scope="col">Validation n</th><th scope="col">Accuracy</th><th scope="col">AUROC</th><th scope="col">Best epoch</th><th scope="col">Epochs run</th></tr></thead><tbody><tr><th scope="row">1</th><td>18</td><td>77.78%</td><td>0.8117</td><td>79</td><td>89</td></tr><tr><th scope="row">2</th><td>18</td><td>66.67%</td><td>0.7532</td><td>45</td><td>55</td></tr><tr><th scope="row">3</th><td>18</td><td>33.33%</td><td>0.7468</td><td>27</td><td>37</td></tr><tr><th scope="row">4</th><td>17</td><td>35.29%</td><td>0.7955</td><td>14</td><td>24</td></tr><tr><th scope="row">5</th><td>17</td><td>58.82%</td><td>0.5000</td><td>200</td><td>200</td></tr><tr><th scope="row">Mean ± SD</th><td>5 folds</td><td>54.38% ± 17.47%</td><td>0.7214 ± 0.1134</td><td>—</td><td>—</td></tr></tbody></table></div><figure id="figure-S2-loss"><a href="../../articles/cancer-classification/S2-loss.svg" aria-label="Open full-size S2 five validation-loss training histories"><img src="../../articles/cancer-classification/S2-loss.svg" alt="S2 five validation-loss training histories" loading="lazy" width="3972" height="3324" /></a><figcaption><b>Figure 43:</b> Each color is one development fold; dots mark that fold's selected best epoch. The vertical axis is logarithmic. These are validation losses, not final-test trajectories; the final refit never monitors test loss.</figcaption></figure>
+        <h3>Interpretation</h3>
+        <p>
+          S2 performs poorly in both pooled OOF and final classification. It
+          gets seven final lung tumors and six final melanomas right, missing
+          eight melanomas. Ten coordinates retain about 62% of the positive
+          spectrum, but not necessarily the information relevant to the label.
+          Unsupervised geometry can emphasize other variation. Loss of useful
+          dimensions is one hypothesis; coordinate scale and neural optimization
+          are others. The runs do not separate these explanations. This is a
+          result for this pipeline and configuration, not proof that dimensionality
+          reduction or MDS is generally unsuitable.
+        </p>
+
+        <h2 id="discussion">What the comparisons do—and do not—establish</h2>
+        <p>
+          The clearest mutation comparison is counts versus frequencies on the
+          same tumor split. Strong M4 and M5 results show that an explicit burden
+          denominator is not required for discrimination here. Marginal versus
+          joint counts changes one pooled OOF error; normalizing the joint counts
+          changes one more. These small differences do not justify a stable
+          ranking. We have one cohort, one final split, and no verified patient-level
+          independence or external evaluation.
         </p>
         <p>
-          The useful outcome is not just a table of eight scores. It is a
-          workflow that makes prediction units, fit boundaries, device behavior,
-          stopping conditions, and unsupported assumptions visible. A perfect
-          test score is worth reporting. So is the reason not to trust it too far.
+          Tobacco- and ultraviolet-associated processes make a lung/melanoma
+          distinction biologically plausible.<d-cite key="alexandrov2020"></d-cite>
+          The models did not estimate signature exposures, test causality, or
+          rule out cohort and technical confounding. The useful finding is that
+          the chosen mutation representations support prediction on this split,
+          not that a specific process has been identified by the classifier.
         </p>
+        <p>
+          The wide-matrix comparison is mixed: S0 succeeds on the final set,
+          S1's high OOF discrimination does not transfer, and S2 is weak in both
+          evaluations. Each inherits the same uncertain <code>NA</code> semantics
+          and nonconverged imputation diagnostics. Even a perfectly implemented
+          transform is only as meaningful as the input assumptions behind it.
+        </p>
+        <div class="table-scroll" role="region" aria-label="Evidence and unresolved questions" tabindex="0">
+          <table>
+            <caption>Keep measurements separate from explanations and missing evidence.</caption>
+            <thead><tr><th scope="col">Observed</th><th scope="col">Supported statement</th><th scope="col">Not established</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">M2–M5 and S0: 22/22 final cases</th><td>No errors on eight lung and fourteen melanoma test tumors</td><td>Perfect population accuracy or clinical validity</td></tr>
+              <tr><th scope="row">M4/M5 retain strong discrimination</th><td>Explicit count scale is not required here</td><td>Absence of all burden-related or technical signals</td></tr>
+              <tr><th scope="row">All six imputation refits plateau</th><td>Finite output under the recorded stopping rules</td><td>Convergence or correct biological interpretation</td></tr>
+              <tr><th scope="row">S1 deteriorates; S2 remains weak</th><td>These configurations do not reproduce S0's final result</td><td>A demonstrated cause or a general verdict on neural networks/MDS</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The next scientific step is to verify how the sample matrix was made
+          and what <code>NA</code> means, then check patient and cohort dependence
+          and evaluate an independent cohort. Targeted ablations could test the
+          competing explanations for S1 and S2. Tuning against the final scores
+          reported here would require a new evaluation boundary, not a revised
+          claim about this already-seen test set.
+        </p>
+
+        <h2 id="audit">Numerical audit and published evidence</h2>
+        <p>
+          The experiments run in an isolated Python 3.12 package with Keras 3 on
+          PyTorch. The measured neural fits, sample imputation, MDS, and L2
+          logistic numerical path use an RTX 2080 Ti. Imputation, MDS, and logistic
+          calculations use float64; neural inputs and weights use float32. File
+          reading, mask generation, standard scaling, and serialization remain on
+          CPU. Compatible sample training scopes share checksummed preprocessing;
+          continuation times with cache reuse are not clean speed benchmarks.
+        </p>
+        <p>
+          GPU least squares needs particular care: the CUDA <code>lstsq</code>
+          driver assumes full rank.<d-cite key="torch-lstsq"></d-cite>
+          A held-out row's observed subset need not satisfy that assumption. Its
+          projection uses an SVD minimum-norm solution with the stated cutoff.
+          The completed local suite passed 281 tests covering source audits,
+          fit boundaries, numerical references, rank-deficient cases, GPU/CPU
+          agreement, serialization, and end-to-end fixture runs. Those software
+          checks do not validate biological provenance.
+        </p>
+        <p>
+          <a href="../../articles/cancer-classification-results.json" download>Download the aggregate evidence used by this article</a>:
+          confusion counts, class metrics, complete ROC/PR coordinate arrays,
+          five-fold scores, training-loss histories, rank-comparison scores,
+          imputation traces, and the final MDS spectrum. The snapshot records
+          source-file fingerprints and report hashes. It contains no tumor
+          identifiers, per-tumor records, or probability-threshold lists. Plots
+          are rendered from saved real-data artifacts; no model is trained by
+          the website or during chart generation. Counts and rates are tabulated
+          here to make the primary findings readable without downloads or controls.
+        </p>
+
       </d-article>
 
       <d-bibliography>

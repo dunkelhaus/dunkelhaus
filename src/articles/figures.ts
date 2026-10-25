@@ -9,6 +9,5 @@
 export type FigureImporter = () => Promise<{ default: unknown }>;
 
 export const figureImports: Record<string, FigureImporter> = {
-  "cancer-results": () => import("./CancerResultsFigure.svelte"),
   "reward-playground": () => import("./PlaygroundFigure.svelte"),
 };

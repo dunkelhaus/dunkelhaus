@@ -75,6 +75,39 @@ d-article blockquote {
 }
 
 /* Figures and captions */
+d-article figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+d-article figure > a:has(img) {
+  display: block;
+  border-bottom: none;
+}
+
+d-article figure > a:has(img):focus-visible {
+  outline: 2px solid var(--cyan-text);
+  outline-offset: 3px;
+}
+
+/* Keep paired evidence side by side when it fits, and stack it on phones. */
+d-article .figure-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+
+d-article .figure-panels > a {
+  display: block;
+  border-bottom: none;
+}
+
+d-article .figure-panels > a:focus-visible {
+  outline: 2px solid var(--cyan-text);
+  outline-offset: 3px;
+}
+
 figcaption,
 d-article .figcaption {
   color: var(--muted);
@@ -102,31 +135,7 @@ d-article .table-scroll {
   overflow-x: auto;
 }
 
-d-article .figure-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-block: 1rem;
-}
-
-d-article .figure-controls label {
-  display: grid;
-  gap: 0.5rem;
-  max-width: 100%;
-}
-
-d-article .figure-controls select {
-  min-height: 44px;
-  max-width: 100%;
-  padding: 0.5rem;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-d-article .table-scroll:focus-visible,
-d-article .figure-controls select:focus-visible {
+d-article .table-scroll:focus-visible {
   outline: 2px solid var(--cyan-text);
   outline-offset: 3px;
 }

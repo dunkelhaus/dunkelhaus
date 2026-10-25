@@ -13,7 +13,7 @@ export const articles: readonly Article[] = [
     title: "Rebuilding a cancer-classification experiment",
     published: "2026-10-25",
     description:
-      "Eight experiments, train-only preprocessing, GPU execution, and the data assumptions behind a perfect test score.",
+      "Eight cancer classifiers explained through representations, validation boundaries, measured curves, and unresolved data assumptions.",
   },
   {
     slug: "reward-design",
