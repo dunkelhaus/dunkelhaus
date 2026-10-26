@@ -5,6 +5,7 @@ import { articles } from "../lib/articles";
 const root = new URL("../../", import.meta.url);
 const results = JSON.parse(readFileSync(new URL("public/articles/cancer-classification-results.json", root), "utf8"));
 const page = readFileSync(new URL("lab/cancer-classification/index.html", root), "utf8");
+const eda = JSON.parse(readFileSync(new URL("public/articles/cancer-classification-eda.json", root), "utf8"));
 
 describe("published cancer result snapshot", () => {
   it("contains exactly eight real-data experiments and labels the two prediction units", () => {
@@ -108,11 +109,66 @@ describe("published cancer result snapshot", () => {
         }
       }
     }
-    expect(page.match(/<figure id=/g)).toHaveLength(43);
+    expect(page.match(/<figure id=/g)).toHaveLength(46);
     const numbers = [...page.matchAll(/<b>Figure (\d+):<\/b>/g)].map((match) => Number(match[1]));
     expect(numbers).toEqual(Array.from({ length: 43 }, (_, index) => index + 1));
     expect(page).not.toMatch(/<select|Explore measured results|uv run|uv sync/);
-    expect(page.match(/<d-math block/g)).toHaveLength(13);
+    for (const section of ["eda-mutations", "eda-samples", "features", "neural-model", "imputation"]) {
+      expect(page).toContain(`id="${section}"`);
+    }
+    for (const equation of ["P(b,s,c", "h_i^{(1)}", "\\mathcal L_{\\mathcal B}", "C_{ij}^{(0)}", "R_m^{(q+1)}", "\\delta_{q+1}"]) {
+      expect(page).toContain(equation);
+    }
+  });
+
+  it("ties the dataset previews and exploratory summaries to their stated populations", () => {
+    expect(eda.schema_version).toBe(1);
+    expect(eda.provenance.derived_after_experiments).toBe(true);
+    expect(eda.provenance.training_split_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(eda.source_sha256.mutation).toBe(results.source_audit.mutation_sha256);
+    expect(eda.source_sha256.sample).toBe(results.source_audit.sample_sha256);
+    const mutation = eda.heads["fm_mutations_independent.tab"];
+    const sample = eda.heads["fm_sample_independent.tab"];
+    expect(mutation.headers).toHaveLength(15);
+    expect(sample.total_columns).toBe(1499664);
+    expect(sample.shown_columns).toBe(8);
+    expect(sample.headers[0]).toBe("");
+    const cells = (label: string) => {
+      const table = page.split(`aria-label="${label}"`)[1].split("</table>")[0];
+      return [...table.split("<tbody>")[1].matchAll(/<(?:td|th)\b[^>]*>(.*?)<\/(?:td|th)>/g)].map((m) => m[1]);
+    };
+    expect(cells("Mutation dataset head")).toEqual(mutation.rows.flat());
+    expect(cells("Sample dataset head")).toEqual(sample.rows.flat());
+    const stats = eda.sample_development;
+    expect(stats.total_cells).toBe(88 * 1499663);
+    expect(stats.observed_cells + stats.missing_cells).toBe(stats.total_cells);
+    expect(stats.observed_zero_cells).toBe(0);
+    expect(stats.observed_value_quantiles).toEqual({ min: 1, median: 1, p95: 2, max: 106127 });
+    const histogram: number[] = stats.observed_training_tumors_per_feature_histogram;
+    expect(histogram).toHaveLength(89);
+    expect(histogram.reduce((a, b) => a + b, 0)).toBe(1499663);
+    expect(histogram.reduce((sum, n, support) => sum + n * support, 0)).toBe(stats.observed_cells);
+    expect(histogram[0]).toBe(73033);
+    expect(eda.development_unique_mutation_contexts).toBe(96);
+    expect(eda.development_profiles.map((p: { n: number }) => p.n)).toEqual([34, 54]);
+    for (const profile of eda.development_profiles) {
+      expect(profile.retained_mutations).toHaveLength(profile.n);
+      for (const [lo, hi] of [[0, 4], [4, 10], [10, 14]]) {
+        expect(profile.mean_marginal_frequencies.slice(lo, hi).reduce((a: number, b: number) => a + b, 0)).toBeCloseTo(1, 12);
+      }
+    }
+    for (const example of eda.training_examples) {
+      expect(example.partition).toBe("development");
+      expect(example.sample_scaled_first_features).toHaveLength(7);
+      for (const [lo, hi] of [[0, 4], [4, 10], [10, 14]]) {
+        expect(example.M2.slice(lo, hi).reduce((a: number, b: number) => a + b, 0)).toBe(example.mutation_count);
+        expect(example.mutation_onehot.slice(lo, hi).reduce((a: number, b: number) => a + b, 0)).toBe(1);
+      }
+      example.M4.forEach((value: number, j: number) => expect(value).toBeCloseTo(example.M2[j] / example.mutation_count, 12));
+    }
+    for (const name of ["eda-mutation-burden", "eda-substitutions", "eda-sample-support"]) {
+      expect(existsSync(new URL(`public/articles/cancer-classification/${name}.svg`, root))).toBe(true);
+    }
   });
 
   it("matches the registry and preserves template structure without placeholders or local CSS", () => {
