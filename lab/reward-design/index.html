@@ -85,41 +85,63 @@
 
       <d-article>
         <p class="l-text">
-          Rewards are the specification an agent can actually read. You can
-          write a mission statement, a scoring rubric, or a product goal, but a
-          reinforcement-learning agent only responds to the number it receives
-          after each step. Design those numbers carelessly and the agent does
-          exactly what you did not intend, in a way that looked perfectly
-          reasonable from inside its own scorecard. This article takes a small
-          navigation agent with tabular <d-cite key="sutton2018reinforcement"
+          Consider a learning agent whose task is to reach a goal while avoiding
+          hazards along the way. A reasonable starting point would be to reward
+          it for reaching the goal, penalize encounters with hazards, and give
+          each step a small cost so that it has a reason to finish promptly.
+          These choices seem fairly straightforward, though the behavior they
+          encourage depends on how the rewards work together. If we also reward
+          the agent for remaining active, for example, we need to consider whether
+          finishing the task is still the most attractive outcome.
+        </p>
+        <p>
+          This article works through that question using a small navigation
+          environment and tabular <d-cite key="sutton2018reinforcement"
             >Q-learning</d-cite
-          > and shows how each reward setting turns into behavior — and lets
-          you reshape its incentives while it learns, inside the page.
+          >. The environment is simple enough that we can follow the agent's
+          decisions, change a reward, and look at how its learned behavior changes.
+          The interactive figure runs inside the page, allowing us to compare
+          those choices directly while keeping the world and learning procedure
+          the same.
         </p>
 
-        <h2 id="environment">A fixed, readable world</h2>
+        <h2 id="environment">The task and its environment</h2>
         <p>
-          The environment is an 8 × 6 grid — 48 cells, walls, hazards, goal —
-          solved entirely in memory. The agent, a cyan circle labeled
-          <strong>A</strong>, starts at <strong>S</strong> in the lower left.
-          The goal, a magenta diamond labeled <strong>G</strong>, sits in the
-          upper right. Light gray crossed squares block movement; magenta
-          triangles impose a hazard penalty on the step that enters them. Four
-          actions move the agent up, right, down, or left; an off-grid move or
-          a wall leaves its position unchanged.
+          The world is an 8 × 6 grid with 48 cells. The agent starts at
+          <strong>S</strong> in the lower left and is shown as a cyan circle
+          labeled <strong>A</strong>. Its destination is the magenta diamond
+          labeled <strong>G</strong> in the upper right. It can choose one of
+          four actions at each step: move up, right, down, or left. Walls, shown
+          as light gray crossed squares, block movement, while magenta triangles
+          mark hazards that the agent can enter at a cost.
         </p>
         <p>
-          The reward terms are small and legible: a per-step reward, a hazard
-          penalty added to that step's reward, and a goal reward that ends an
-          episode immediately. Any episode that has not reached the goal after
-          96 steps stops as a timeout. Defaults: goal $+20$, hazard $-8$, step
-          $-0.2$.
+          With the default settings, an ordinary step gives a reward of $-0.2$.
+          Entering a hazard adds a penalty of $-8$, bringing that step's reward
+          to $-8.2$. Reaching the goal gives $+20$ and ends the episode; this
+          goal reward replaces the ordinary step reward on that transition.
+          An attempt to move into a wall or beyond the grid leaves the agent
+          in place, but still counts as a step and receives the reward associated
+          with the resulting cell. These rules make it possible to distinguish
+          movement that helps complete the task from movement that merely uses
+          up more of the episode.
+        </p>
+        <p>
+          Each episode begins at the same starting cell and stops either when
+          the agent reaches the goal or after 96 steps. The latter outcome is
+          reported as a timeout. This bound keeps each training episode and
+          policy replay short enough to inspect, including cases where the
+          agent repeatedly chooses an action that leaves it in the same place.
         </p>
 
         <h2 id="update">The Q-learning update</h2>
         <p>
-          After every transition the agent nudges one number in its table — the
-          value it holds for taking action $a$ in state $s$:
+          For context, the state $s$ in this experiment is the agent's current
+          cell, and an action $a$ is one of its four movement choices. The agent
+          keeps a table of values $Q(s,a)$ that estimate the discounted reward
+          it can obtain by taking an action and then continuing from the next
+          state. After observing a reward $r$ and a resulting state $s'$, it
+          updates the entry for the action it just took:
         </p>
 
         <d-math block tabindex="0"
@@ -128,90 +150,142 @@
         >
 
         <p>
-          With the playground settings, the learning rate $\alpha = 0.25$ keeps
-          each correction partial, and the discount $\gamma = 0.95$ lets value
-          flow backward from the goal, one cell at a time. When the goal (or
-          the step cap) ends an episode there is no $s'$ to look ahead to, so
-          the terminal update drops the future-value term entirely. The cited
-          texts develop these dynamics in depth
-          <d-cite key="watkins1992q"
-            >— Q-learning converges under mild conditions</d-cite
-          >.
+          The learning rate $\alpha=0.25$ determines how much of the difference
+          between the current estimate and the new target is applied. The
+          discount $\gamma=0.95$ reduces the contribution of rewards that lie
+          further ahead, while $\max_{a'}Q(s',a')$ supplies the best current
+          estimate available from the next cell. Reaching the goal sets that
+          future-value term to zero, since the task has ended. The 96-step cap
+          is handled as a timeout; the final ordinary transition still uses
+          the next cell's estimate before the episode stops.
         </p>
         <p>
-          Exploration is $\varepsilon$-greedy: the agent picks a random action
-          with probability $\varepsilon$, decaying from $0.5$ toward $0.08$ as
-          episodes accumulate, and otherwise takes its best-valued action.<d-footnote
+          For example, suppose the agent takes an action into the goal while
+          that action's table entry is still zero. The reward is 20 and there
+          is no future contribution, so the update gives $Q(s,a)=0.25\times20=5$.
+          This entry belongs to the action taken from the cell immediately
+          before the goal. When another transition enters that predecessor
+          cell, its target can include the learned value of 5. Through repeated
+          transitions, information about reaching the goal can therefore
+          influence choices further back along a route. Watkins and Dayan
+          examine the convergence of this
+          procedure under conditions on sampling and learning rates.<d-cite
+            key="watkins1992q"
+          ></d-cite>
+        </p>
+        <p>
+          During training, the agent also needs opportunities to try actions
+          whose values it has not yet learned. It uses an
+          $\varepsilon$-greedy rule, choosing a random action with probability
+          $\varepsilon$ and otherwise choosing the action with the highest
+          current value. Exploration starts at $0.5$ and decreases toward a
+          floor of $0.08$ as episodes accumulate.<d-footnote
             >Hyperparameters: learning rate $\alpha = 0.25$, discount
             $\gamma = 0.95$, exploration $\varepsilon = 0.5$ decaying toward
             $0.08$. Ties in equal action values break by action order.</d-footnote
           >
-          <em>Watch policy</em> and <em>Step</em> exploit that best-valued
-          action without updating Q at all, so watching an untrained agent can
-          simply loop until the timeout — the report is honest about that.
+          The <em>Watch policy</em> and <em>Step</em> controls instead use the
+          highest-valued action without exploration or updates. Before training,
+          the table contains equal values and ties follow a fixed action order,
+          so a replay can repeatedly choose an unhelpful action until it times
+          out. Comparing that replay with one after training gives us a concrete
+          way to see what the updates have changed.
         </p>
 
         <d-figure data-figure="reward-playground">
           <div class="figure-body" data-figure-body></div>
           <figcaption>
-            <b>Figure 1:</b> The reward playground. The agent trains in
-            bounded batches of real Q-learning updates; the sliders-in-labels
-            on the right set the incentives, and the learned policy replays on
-            demand. Everything runs locally in a worker beside this article.
+            <b>Figure 1:</b> The playground lets us follow the same agent under
+            different reward settings. Use the numeric fields to set the rewards,
+            train a batch of episodes, and then replay the learned policy to
+            inspect its route and outcome. Training and evaluation are reported
+            separately, with all computation taking place on your device.
           </figcaption>
         </d-figure>
 
-        <h2 id="experiments">Incentive changes worth trying</h2>
+        <h2 id="experiments">Comparing the reward settings</h2>
         <p>
-          Two runs bracket the lesson. Launch the figure, accept the defaults,
-          and press <em>Train agent</em>: with steps costing $-0.2$ each, the
-          agent learns a direct, fairly safe route, since dawdling bleeds
-          reward and hazards are clearly unhealthy. Then change the step reward
-          to $+1$ and retrain. Now the agent earns simply for moving, so it can
-          do better by never finishing: expect wandering loops that burn the
-          step-cap instead of chasing the goal. The task asks for reaches-goal
-          behavior; the reward paid for something else, and the agent
-          obeyed the reward.
+          Start by launching the figure with its default settings and pressing
+          <em>Train agent</em>. Each press adds 500 training episodes. Once the
+          batch finishes, use <em>Watch policy</em> to follow the learned route.
+          The step cost gives the agent an incentive to finish promptly, while
+          the larger hazard penalty makes a detour worthwhile when it avoids
+          those cells. Look at the route, whether it reaches the goal, and how
+          many steps it takes, alongside the reported return.
         </p>
         <p>
-          A third exposure: set the hazard penalty to $0$ and watch the policy.
-          With no penalty for cutting through triangles, some policies route
-          straight through hazards and still reach the goal — legal in the
-          spec, suspicious in the behavior. That gap between "reached the
-          goal" and "behaved the way you wanted" is the entire argument of
-          this article.
+          Next, consider a setting where activity itself is rewarded. Set the
+          step reward to $+1$, lower the goal reward to $5$, and train again.
+          The agent can now collect rewards while remaining away from the goal,
+          whereas arriving there ends that opportunity. This gives it a reason
+          to prefer continued activity, including attempts to move into a wall
+          that leave its position unchanged. Inspect whether the learned policy
+          reaches the goal or uses the full step allowance. The balance between
+          the two rewards matters here; changing the sign of the step reward
+          alone does not guarantee a particular learned behavior.
+        </p>
+        <p>
+          For a third comparison, restore the goal reward to $20$ and the step
+          reward to $-0.2$, then set the hazard penalty to zero. After retraining,
+          examine whether the route passes through a triangle. Entering those
+          cells now has the same immediate reward as entering an ordinary cell,
+          so the agent has no additional reward-based reason to avoid them.
+          If avoiding hazards was part of what we intended, this comparison
+          helps show how that intention depends on an explicit cost in the
+          reward function.
+        </p>
+        <p>
+          Changing a reward clears the learned table, so each comparison needs
+          a new training batch. Additionally, the displayed returns are ordinary
+          sums of the rewards received, while Q-learning uses the discounted
+          target described above. Looking at return together with the outcome
+          and route helps us understand what a high number represents, especially
+          when changing the reward function changes the meaning of the score
+          itself.
         </p>
 
         <h2 id="execution">Execution and accessibility</h2>
         <p>
-          The playground keeps its computation in a Web Worker, so seconds of
-          training never block the page's scrolling or reading. The figure
-          downloads and starts only on your explicit launch — the article's
-          initial payload excludes it — and closing the figure returns it to a
-          relaunch state. Every control is a semantic button or input: full
-          keyboard access, touch targets tuned for the site standard, textual
-          progress (position, outcome, per-run metrics) alongside the canvas,
-          and symbol labels that do not rely on color alone. Under reduced
-          motion there is no decorative animation; <em>Pause</em> and
-          <em>Step</em> let you advance the policy at your own tempo.
-          Session identifiers prevent stale messages after a reset, and if the
-          worker fails, the article stays readable with a retry button — the
-          failure never eats the text.
+          The figure downloads its experiment code after an explicit launch
+          and runs the learning procedure in a Web Worker. This keeps the
+          computation separate from the page's interface work, allowing the
+          reader to continue scrolling and reading during training. Closing the
+          experiment returns to the launch control, while session identifiers
+          keep messages from an earlier reset from affecting the current run.
+          If the worker fails, a retry control is shown alongside the article.
+        </p>
+        <p>
+          The controls support keyboard use, and a textual summary gives the
+          agent's position, outcome, and metrics alongside the canvas. Symbols
+          distinguish the agent, goal, hazards, and walls in addition to their
+          colors. Reduced-motion preferences remove decorative animation, and
+          the <em>Pause</em> and <em>Step</em> controls let the reader inspect
+          the policy one action at a time. Together, these choices provide
+          several ways to follow the experiment according to how the reader
+          wants to interact with it.
         </p>
 
-        <h2 id="limits">Limits and honest reporting</h2>
+        <h2 id="limits">Interpreting the experiment</h2>
         <p>
-          Scale first: this is tabular Q-learning in a 48-cell world — an
-          educational instrument, not a production RL system, and no evidence
-          about large networks. The numbers are still real Q-learning,
-          executed in genuine training episodes with reproducible seeds,
-          verified by unit tests over transitions, bounds, and value updates,
-          plus browser tests over the full launch/train/watch/reset flow.
-          Metrics never pretend to be progress: episode counts and training
-          returns come from executed training episodes, while policy steps and
-          policy return come from explicit evaluation. Even at small scale the
-          lesson generalizes: every reward function is a specification, and
-          the behavior you get is the one you paid for.
+          Working with a small, fixed world makes it easier to connect a reward
+          choice to the transitions and updates that follow. The implementation
+          uses reproducible seeds, with tests covering movement rules, reward
+          calculations, value updates, and the browser's training and replay
+          controls. Its fixed learning rate and finite training batches still
+          leave a distinction between observing a useful policy and establishing
+          theoretical convergence. The state also contains only the current
+          cell, so the agent cannot choose differently according to how many
+          steps remain before a timeout.
+        </p>
+        <p>
+          These details help define what we can take away from the comparisons.
+          We can inspect how the selected rewards influence this agent's route,
+          and how those incentives relate to the task we had in mind. Extending
+          that observation to a larger environment or a neural agent would
+          require further experiments. The useful question to carry forward is
+          whether the reward function gives an agent a reason to pursue each
+          part of the intended outcome, including the constraints that seem
+          obvious to the person designing the task.
         </p>
       </d-article>
 
